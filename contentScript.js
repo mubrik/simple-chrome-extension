@@ -6,8 +6,13 @@ let trackObject = {
     trackArtist: "",
     trackDuration: 0,
     trackHalfTimer: 0,
-    notifyTrack: false
-}
+    notifyTrack: false,
+    playStatus: "idle"
+};
+
+let trackStatus = {
+    playStatus: "idle"
+};
 
 function setupListeners() {
 
@@ -21,29 +26,34 @@ function setupListeners() {
         videoElem.addEventListener("canplay", console.log("canplay"), true)
         // videoElem.addEventListener("durationchange", handleDurationChangeEvent);
 
-    }, 400)
+    }, 1000)
     
-}
+};
 
 function handlePlayEvent(event) {
 
     let videoNode = event.target;
-    
-    // set variables
-    setTrackVariables()
-    // polling for track time
-    trackHalfwayValidator()
-    trackTitleValidator()
 
-    videoNode.removeEventListener("canplay", console.log("canplay"), true)
-}
+    // add error checking later
+    // get and set track variables
+    setTrackVariables();
+    // interval checking for track play time
+    trackHalfwayValidator();
+    // interval checking of track title
+    trackTitleValidator();
+    // if no error set now playing status
+    trackObject.playStatus = "playing"
 
+    videoNode.removeEventListener("canplay", console.log("canplay"), true);
+};
 
 function handlePauseEvent(event) {
     console.log('paused')
-}
+    // if no error set now playing status
+    trackObject.playStatus = "paused"
+};
 
-function setTrackVariables () {
+function setTrackVariables() {
 
     setTimeout(() => {
 
@@ -76,9 +86,9 @@ function setTrackVariables () {
     
     }, 2000)
 
-} 
+};
 
-function trackTitleValidator () {
+function trackTitleValidator() {
 
     let mainChecker = setInterval(() => {
 
@@ -89,9 +99,9 @@ function trackTitleValidator () {
         }
     
     }, 20000)
-}
+};
 
-function trackHalfwayValidator () {
+function trackHalfwayValidator() {
     let mainChecker = setInterval(() => {
 
         if (isTrackHalfway()) {
@@ -107,14 +117,13 @@ function trackHalfwayValidator () {
         }
     }, 25000)
 
-}
-
+};
 
 function handleTrackHalfway() {
     // do something
     console.log("halfway reached")
     trackObject.notifyTrack = true
-}
+};
 
 function getTrackDuration() {
 
@@ -126,7 +135,7 @@ function getTrackDuration() {
 
     return trackDuration;
 
-}
+};
 
 function getTrackBarCurrentTimer() {
 
@@ -138,7 +147,7 @@ function getTrackBarCurrentTimer() {
 
     return trackDuration;
 
-}
+};
 
 function getCurrentTrackTimers() {
 

@@ -20,7 +20,8 @@
         "history"
     ],
     "host_permissions": [
-        "https://music.youtube.com/*"
+        "https://music.youtube.com/*",
+        "http://ws.audioscrobbler.com/"
     ],
     "content_scripts": [
         {
