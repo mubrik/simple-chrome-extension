@@ -1,29 +1,50 @@
 console.log("content script")
 
 // data store
-let trackObject = {
+const trackObject = {
     trackTitle: "",
     trackArtist: "",
+    trackAlbum: "",
+    trackYear: "",
     trackDuration: 0,
     trackHalfTimer: 0,
     notifyTrack: false,
-    playStatus: "idle"
+    playStatus: "idle",
+    bodyData: function() {
+        return `artist=${this.trackArtist}&track=${this.trackTitle}`
+    },
+    setAll: function(listObj) {
+        for (const [key, value] of Object.entries(listObj)) {
+            this[key] = value;
+        }
+    },
+    setter: function(param, value) {
+        this[param] = value;
+        console.log(`${param} is now ${value}`);
+    }
 };
 
-let trackStatus = {
-    playStatus: "idle"
-};
+function setupListeners({key}) {
 
-function setupListeners() {
+    // check if user has authenticated extension
+    console.log(key)
+    if (key === undefined) {
+        console.log("no key setup");
+        return false
+    };
 
     console.log("listeners")
     setTimeout(() => {
 
         let videoElem = document.querySelector(".html5-video-container").children[0];
+        let prevButton = document.querySelector(".left-controls-buttons .previous-button")
+        let nextButton = document.querySelector(".left-controls-buttons .next-button")
 
         videoElem.addEventListener("playing", handlePlayEvent);
         videoElem.addEventListener("pause", handlePauseEvent);
         videoElem.addEventListener("canplay", console.log("canplay"), true)
+        prevButton.addEventListener("onclick", handlePreviousClickedEvent);
+        nextButton.addEventListener("onclick", handleNextClickedEvent);
         // videoElem.addEventListener("durationchange", handleDurationChangeEvent);
 
     }, 1000)
@@ -42,7 +63,7 @@ function handlePlayEvent(event) {
     // interval checking of track title
     trackTitleValidator();
     // if no error set now playing status
-    trackObject.playStatus = "playing"
+    trackObject.setter("playStatus", "playing")
 
     videoNode.removeEventListener("canplay", console.log("canplay"), true);
 };
@@ -50,7 +71,23 @@ function handlePlayEvent(event) {
 function handlePauseEvent(event) {
     console.log('paused')
     // if no error set now playing status
-    trackObject.playStatus = "paused"
+    trackObject.setter("playStatus", "paused")
+};
+
+function handleNextClickedEvent(event) {
+    // do something
+
+    // call set variables
+
+    // start halfway validator
+};
+
+function handlePreviousClickedEvent(event) {
+    // do something
+
+    // check if tracked actually changed or restarted
+
+    // call set variables
 };
 
 function setTrackVariables() {
@@ -64,24 +101,36 @@ function setTrackVariables() {
             // do something
             console.log("same track")
             return false;
-        }
+        };
         
         // get track artist
-        let trackArtist = getCurrentTrackArtist()
+        let trackArtist = getCurrentTrackArtist();
+
+        // get track album
+        let trackAlbum = getCurrentTrackAlbum();
+
+        // get track year
+        let trackYear = getCurrentTrackYear();
     
         // get track timers 
-        let timers = getCurrentTrackTimers()
+        let [trackDuration, trackHalfTimer] = getCurrentTrackTimers();
     
-        console.log(trackArtist, timers)
+        console.log(`track artist: ${trackArtist}, album: ${trackAlbum}, year: ${trackYear}`)
     
-        // set object 
-        trackObject = {
+        // set object
+        trackObject.setAll({
             trackTitle,
             trackArtist,
-            notifyTrack: false,
-            ...timers
-        }
-    
+            trackAlbum,
+            trackYear,
+            trackDuration,
+            trackHalfTimer,
+            notifyTrack: false
+        });
+
+        // update nowplaying on lastfm
+        scrobbleNowPlaying();
+
         return true;
     
     }, 2000)
@@ -102,12 +151,20 @@ function trackTitleValidator() {
 };
 
 function trackHalfwayValidator() {
+
     let mainChecker = setInterval(() => {
+
+        if (trackObject.playStatus === "paused") {
+            console.log("track is paused");
+            return false;
+        }
 
         if (isTrackHalfway()) {
 
             if (!trackObject.notifyTrack) {
-                handleTrackHalfway()
+                console.log("halfway reached")
+                // update object
+                trackObject.setter('notifyTrack', true);
             } else {
                 console.log('track past halfway but hasnt changed')
             }
@@ -117,12 +174,6 @@ function trackHalfwayValidator() {
         }
     }, 25000)
 
-};
-
-function handleTrackHalfway() {
-    // do something
-    console.log("halfway reached")
-    trackObject.notifyTrack = true
 };
 
 function getTrackDuration() {
@@ -152,33 +203,44 @@ function getTrackBarCurrentTimer() {
 function getCurrentTrackTimers() {
 
     // duration 
-    let trackDuration = getTrackDuration()
+    let trackDuration = getTrackDuration();
 
     // half duration 
     let trackHalfTimer = trackDuration/2
 
-    return {
+    return [
         trackDuration,
         trackHalfTimer
-    }
+    ];
 };
 
 function getCurrentTrackTitle() {
     let titleElement = document.querySelector('.middle-controls .title');
     return titleElement.innerText;
-}
+};
 
 function getCurrentTrackArtist() {
-    let artistElement = document.querySelector(".middle-controls .complex-string")
+    let artistElement = document.querySelector(".middle-controls .complex-string").children[0];
     return artistElement.innerText;
-}
+};
+
+function getCurrentTrackAlbum() {
+    // hit or miss on correct album
+    let albumElement = document.querySelector(".middle-controls .complex-string").children[2];
+    return albumElement.innerText;
+};
+
+function getCurrentTrackYear() {
+    let yearElement = document.querySelector(".middle-controls .complex-string").children[4];
+    return yearElement.innerText;
+};
 
 function isTrackHalfway() {
-
 
     let trackCurrentTime = getTrackBarCurrentTimer();
     console.log(`current track time: ${trackCurrentTime}`)
     console.log(`obj track half time: ${trackObject.trackHalfTimer}`)
+    console.log(trackObject.bodyData())
     // check if track has past halfway duration
     if (trackCurrentTime >= trackObject.trackHalfTimer) {
         return true
@@ -193,5 +255,41 @@ function isPlayingEqualStore() {
     return (playingTitle === trackObject.trackTitle)
 };
 
+function getSessionKey(callback) {
+    // set callback
+    _callback = callback || function(result) {
+        console.log(`${result.scrobblerLastFM} key has been restored`)
+    }
+    // gets the session key and runs a callback function
+    chrome.storage.sync.get(['scrobblerLastFM'], ({scrobblerLastFM}) => _callback(scrobblerLastFM));
+};
 
-document.addEventListener('load', setupListeners());
+function lastFmConnector(requestObj, callback) {
+    // connects to ext script
+    let _req = requestObj;
+    let _call = callback;
+
+    chrome.runtime.sendMessage("kafichdgndnfkcfgnbfjhfdbhclfhmpf",_req, _call);
+
+};
+
+function scrobbleNowPlaying() {
+    // data 
+    let method = "POST";
+    let fmMethod = "track.updateNowPlaying";
+    let bodyData = trackObject.bodyData();
+
+    // call method
+    lastFmConnector({
+        method,
+        fmMethod,
+        bodyData,
+        type: "authreq"
+    },
+    function(response) {
+        console.log(response.msg)
+    }
+    );
+};
+
+document.addEventListener('load', getSessionKey(setupListeners));

@@ -17,7 +17,8 @@
         }
     },
     "permissions": [
-        "history"
+        "history",
+        "storage"
     ],
     "host_permissions": [
         "https://music.youtube.com/*",
@@ -30,5 +31,11 @@
           "run_at": "document_idle",
           "all_frames": true
         }
+    ],
+    "web_accessible_resources": [
+      {
+        "resources": ["networkScript.js"],
+        "matches": ["*://music.youtube.com/*"]
+      }
     ]
 }
