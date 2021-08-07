@@ -1,0 +1,3 @@
+let settings = {
+    scrobbleEnabled: true,
+}

@@ -1,10 +1,10 @@
 {
-    "name": "Hello Extensions",
-    "description": "Base Level Extension",
+    "name": "Chrome Lastfm Scrobbler",
+    "description": "Chrome Lastfm Scrobbler",
     "version": "1.0",
     "manifest_version": 3,
     "action": {
-        "default_popup": "hello.html",
+        "default_popup": "index.html",
         "default_icon": "logo192.png"
     },
     "commands": {
@@ -13,17 +13,21 @@
             "default": "Ctrl+Shift+F",
             "mac": "MacCtrl+Shift+F"
           },
-          "description": "Opens hello.html"
+          "description": "Opens index.html"
         }
     },
     "permissions": [
         "history",
-        "storage"
+        "storage",
+        "alarms"
     ],
     "host_permissions": [
         "https://music.youtube.com/*",
         "http://ws.audioscrobbler.com/"
     ],
+    "background": {
+      "service_worker": "background-wrapper.js"
+    },
     "content_scripts": [
         {
           "matches": ["*://music.youtube.com/*"],
@@ -34,7 +38,7 @@
     ],
     "web_accessible_resources": [
       {
-        "resources": ["networkScript.js"],
+        "resources": ["extScript.js"],
         "matches": ["*://music.youtube.com/*"]
       }
     ]

@@ -1,295 +1,326 @@
-console.log("content script")
+/**
+* class object holding song details 
+*/
+class Song {
 
-// data store
-const trackObject = {
-    trackTitle: "",
-    trackArtist: "",
-    trackAlbum: "",
-    trackYear: "",
-    trackDuration: 0,
-    trackHalfTimer: 0,
-    notifyTrack: false,
-    playStatus: "idle",
-    bodyData: function() {
-        return `artist=${this.trackArtist}&track=${this.trackTitle}`
-    },
-    setAll: function(listObj) {
-        for (const [key, value] of Object.entries(listObj)) {
-            this[key] = value;
-        }
-    },
-    setter: function(param, value) {
-        this[param] = value;
-        console.log(`${param} is now ${value}`);
+    constructor() {
+        this.title = this.getCurrentTrackTitle();
+        this.artist = this.getCurrentTrackArtist();
+        this.year = this.getCurrentTrackYear();
+        this.album = this.getCurrentTrackAlbum();
+        this.timers = this.getCurrentTrackTime();
     }
-};
 
-function setupListeners({key}) {
-
-    // check if user has authenticated extension
-    console.log(key)
-    if (key === undefined) {
-        console.log("no key setup");
-        return false
+    /**@returns {String} */
+    getCurrentTrackTitle() {
+        let titleElement = document.querySelector('.middle-controls .title');
+        return titleElement.innerText;
     };
 
-    console.log("listeners")
-    setTimeout(() => {
+    /**@returns {String} */
+    getCurrentTrackArtist() {
+        let artistElement = document.querySelector(".middle-controls .complex-string").children[0];
+        return artistElement.innerText;
+    };
 
-        let videoElem = document.querySelector(".html5-video-container").children[0];
-        let prevButton = document.querySelector(".left-controls-buttons .previous-button")
-        let nextButton = document.querySelector(".left-controls-buttons .next-button")
+    /**@returns {String} */
+    getCurrentTrackAlbum() {
+        // hit or miss on correct album
+        let albumElement = document.querySelector(".middle-controls .complex-string").children[2];
+        return albumElement.innerText;
+    };
 
-        videoElem.addEventListener("playing", handlePlayEvent);
-        videoElem.addEventListener("pause", handlePauseEvent);
-        videoElem.addEventListener("canplay", console.log("canplay"), true)
-        prevButton.addEventListener("onclick", handlePreviousClickedEvent);
-        nextButton.addEventListener("onclick", handleNextClickedEvent);
-        // videoElem.addEventListener("durationchange", handleDurationChangeEvent);
+    /**@returns {String} */
+    getCurrentTrackYear() {
+        let yearElement = document.querySelector(".middle-controls .complex-string").children[4];
+        return yearElement.innerText;
+    };
 
-    }, 1000)
+    /**@returns {Array} */
+    getCurrentTrackTime() {
+
+        let timeElement = document.querySelector(".time-info").innerText.split("/")
+        let currentTime = timeElement[0]
+        let trackLength = timeElement[1]
     
-};
+        return [this.formatTimeValue(currentTime), this.formatTimeValue(trackLength)]
+    };
 
-function handlePlayEvent(event) {
+    /** 
+    * @returns {Number} return time in millisec
+    * @param {String} string param
+    */
+    formatTimeValue(str) {
+        // split time
+        let timeArr = str.split(":")
+    
+        // convert to int and multiply to get millisec
+        let minutes = parseInt(timeArr[0]) * 60000
+        let seconds = parseInt(timeArr[1]) * 1000
+    
+        return minutes + seconds;
+    }
+}
 
-    let videoNode = event.target;
+/* class monitors play progress */
+class Tracker {
 
-    // add error checking later
-    // get and set track variables
-    setTrackVariables();
-    // interval checking for track play time
-    trackHalfwayValidator();
-    // interval checking of track title
-    trackTitleValidator();
-    // if no error set now playing status
-    trackObject.setter("playStatus", "playing")
+    constructor() {
+        this.playingTrack = null;
+        this.songId = null;
+        this.songMonitor = null;
+        this.isSongPlaying = false;
+        this.isSongScrobbled = false;
+    }
 
-    videoNode.removeEventListener("canplay", console.log("canplay"), true);
-};
+    onPlay() {
 
-function handlePauseEvent(event) {
-    console.log('paused')
-    // if no error set now playing status
-    trackObject.setter("playStatus", "paused")
-};
+        // get song
+        let _nowPlaying = new Song();
 
-function handleNextClickedEvent(event) {
-    // do something
+        // get Id
+        let _songId = this.getSongId(_nowPlaying);
 
-    // call set variables
-
-    // start halfway validator
-};
-
-function handlePreviousClickedEvent(event) {
-    // do something
-
-    // check if tracked actually changed or restarted
-
-    // call set variables
-};
-
-function setTrackVariables() {
-
-    setTimeout(() => {
-
-        let trackTitle = getCurrentTrackTitle()
-            
-        // check if track variable already set
-        if (isPlayingEqualStore()) {
+        // check if same
+        if (this.isSongTheSame(_songId)) {
             // do something
-            console.log("same track")
-            return false;
-        };
-        
-        // get track artist
-        let trackArtist = getCurrentTrackArtist();
 
-        // get track album
-        let trackAlbum = getCurrentTrackAlbum();
-
-        // get track year
-        let trackYear = getCurrentTrackYear();
-    
-        // get track timers 
-        let [trackDuration, trackHalfTimer] = getCurrentTrackTimers();
-    
-        console.log(`track artist: ${trackArtist}, album: ${trackAlbum}, year: ${trackYear}`)
-    
-        // set object
-        trackObject.setAll({
-            trackTitle,
-            trackArtist,
-            trackAlbum,
-            trackYear,
-            trackDuration,
-            trackHalfTimer,
-            notifyTrack: false
-        });
-
-        // update nowplaying on lastfm
-        scrobbleNowPlaying();
-
-        return true;
-    
-    }, 2000)
-
-};
-
-function trackTitleValidator() {
-
-    let mainChecker = setInterval(() => {
-
-        if (isPlayingEqualStore()) {return}
-        else {
-            console.log("track changed")
-            setTrackVariables()
-        }
-    
-    }, 20000)
-};
-
-function trackHalfwayValidator() {
-
-    let mainChecker = setInterval(() => {
-
-        if (trackObject.playStatus === "paused") {
-            console.log("track is paused");
-            return false;
-        }
-
-        if (isTrackHalfway()) {
-
-            if (!trackObject.notifyTrack) {
-                console.log("halfway reached")
-                // update object
-                trackObject.setter('notifyTrack', true);
-            } else {
-                console.log('track past halfway but hasnt changed')
+            // start interval checking, only if one doesnt exist already
+            if (this.songMonitor === null) {
+                this.trackSongChange();
             }
-            
+
+            // update instance
+            this.isSongPlaying = true;
+
         } else {
-            console.log("not halfway yet")
+            this.onSongChange(_nowPlaying);
         }
-    }, 25000)
+    };
 
-};
+    onPause() {
 
-function getTrackDuration() {
+        console.log(this.songMonitor);
 
-    // trackbar
-    let progressBar = document.getElementById("progress-bar");
+        // update instance
+        this.isSongPlaying = false;
+    };
 
-    // duration 
-    let trackDuration = parseInt(progressBar.getAttribute("aria-valuemax"));
+    onSeek() {
+        // seeking bar used, also applies if previous clicked
+        // check if time has been reset to < 00:05
 
-    return trackDuration;
+        // get song
+        let _nowPlaying = new Song();
 
-};
+        // get Id
+        let _songId = this.getSongId(_nowPlaying);
 
-function getTrackBarCurrentTimer() {
-
-    // trackbar
-    let progressBar = document.getElementById("progress-bar");
-
-    // duration 
-    let trackDuration = parseInt(progressBar.getAttribute("value"));
-
-    return trackDuration;
-
-};
-
-function getCurrentTrackTimers() {
-
-    // duration 
-    let trackDuration = getTrackDuration();
-
-    // half duration 
-    let trackHalfTimer = trackDuration/2
-
-    return [
-        trackDuration,
-        trackHalfTimer
-    ];
-};
-
-function getCurrentTrackTitle() {
-    let titleElement = document.querySelector('.middle-controls .title');
-    return titleElement.innerText;
-};
-
-function getCurrentTrackArtist() {
-    let artistElement = document.querySelector(".middle-controls .complex-string").children[0];
-    return artistElement.innerText;
-};
-
-function getCurrentTrackAlbum() {
-    // hit or miss on correct album
-    let albumElement = document.querySelector(".middle-controls .complex-string").children[2];
-    return albumElement.innerText;
-};
-
-function getCurrentTrackYear() {
-    let yearElement = document.querySelector(".middle-controls .complex-string").children[4];
-    return yearElement.innerText;
-};
-
-function isTrackHalfway() {
-
-    let trackCurrentTime = getTrackBarCurrentTimer();
-    console.log(`current track time: ${trackCurrentTime}`)
-    console.log(`obj track half time: ${trackObject.trackHalfTimer}`)
-    console.log(trackObject.bodyData())
-    // check if track has past halfway duration
-    if (trackCurrentTime >= trackObject.trackHalfTimer) {
-        return true
-    } else {
-        return false
+        if (this.isSongTheSame(_songId)) {
+            let [currentTime, _] = _nowPlaying.timers;
+            if (currentTime <= 5000) {
+                // call song change
+                this.onSongChange(_nowPlaying);
+            }
+        }
     }
-};
 
-function isPlayingEqualStore() {
-    // compare playing title and store obj title
-    let playingTitle = getCurrentTrackTitle();
-    return (playingTitle === trackObject.trackTitle)
-};
+    onNext() {
+        // trigger on song change
+    };
 
-function getSessionKey(callback) {
-    // set callback
-    _callback = callback || function(result) {
-        console.log(`${result.scrobblerLastFM} key has been restored`)
+    onPrevious() {
+        // clear this.playingtrack so track can scrobble on replay
+    };
+
+    /** @param {Song} song */
+    onSongChange(song) {
+        // song changed update instance
+
+        // store song
+        this.playingTrack = song;
+
+        // store new song Identfier
+        this.songId = this.getSongId(this.playingTrack);
+
+        // start interval checking, only if one doesnt exist already
+        if (this.songMonitor === null) {
+            this.trackSongChange();
+        }
+
+        // notify lastfm
+        
+
+        // update instance
+        this.isSongPlaying = true;
+        this.isSongScrobbled = false;
+        
     }
-    // gets the session key and runs a callback function
-    chrome.storage.sync.get(['scrobblerLastFM'], ({scrobblerLastFM}) => _callback(scrobblerLastFM));
-};
+
+    /** 
+    * @param {string} param
+    * @returns {boolean}
+    */
+    isSongTheSame(param) {
+        return (param === this.songId);
+    }
+
+    /** 
+    * @param {Song} song
+    * @returns {Boolean}
+    */
+    isSongHalfway(song) {
+
+        let [current, duration] = song.timers;
+        let half = duration / 2;
+        return (current >= half);
+    }
+
+    /** 
+    * @param {Song} song
+    * @returns {String}
+    */
+    getSongId(song) {
+        return String(song["artist"]) + String(song["title"]);
+    }
+
+    trackSongChange() {
+
+        this.songMonitor = setInterval(() => {
+
+            if (!this.isSongPlaying) {
+                console.log("song paused");
+                return
+            }
+
+            let _songhalfway = false;
+            let _songSame = false;
+
+            // get song
+            let _nowPlaying = new Song();
+
+            // get playing song ID
+            let _songId = this.getSongId(_nowPlaying);
+
+            if (this.isSongTheSame(_songId) 
+                && this.isSongScrobbled) {
+                    console.log("song has been scrobbled")
+                    return;
+            }
+
+            // check duration
+            if (this.isSongHalfway(_nowPlaying)){
+                console.log("song halfway")
+                _songhalfway = true;
+
+            } else {
+                // do nothing or implement log current time
+                console.log("song not halfway")
+            }
+
+            // check if song is the same
+            if (this.isSongTheSame(_songId)) {
+                console.log("song same")
+                _songSame = true;
+
+            } else {
+                // song changed do something
+                console.log("song changed")
+                this.onSongChange(_nowPlaying);
+            }
+
+            // only scrobble if song is same and past halfway
+            if (_songhalfway 
+                && _songSame) {
+                    // scrobble to lastfm
+
+                    // cancel monitoring
+                    this.isSongScrobbled = true;
+                }
+
+            
+        }, 12000);
+    }
+}
+
+const playTracker = new Tracker();
+
+/* class handle player events */
+class EventMonitor {
+
+    constructor() {
+
+        this.videoElem = document.querySelector(".html5-video-container").children[0];
+        this.prevButton = document.querySelector(".left-controls-buttons .previous-button #icon");
+        this.nextButton = document.querySelector(".left-controls-buttons .next-button #icon");
+        this.setupListeners();
+    }
+
+    // setup event listeners
+    setupListeners() {
+        this.videoElem.addEventListener("playing", this.handlePlayEvent);
+        this.videoElem.addEventListener("pause", this.handlePauseEvent);
+        this.videoElem.addEventListener("seeked", this.handleSeekingEvent);
+    }
+
+    // general testing
+    handleGeneral(param) {
+        console.log(param)
+    }
+
+    // handles track starts playing
+    handlePlayEvent() {
+        setTimeout(() => {
+            console.log("notifying play instance")
+            playTracker.onPlay();
+        }, 1000)
+    }
+
+    // handle track paused
+    handlePauseEvent() {
+        console.log("notifying pause instance")
+        playTracker.onPause();
+    }
+
+    // handle track seeking
+    handleSeekingEvent() {
+        console.log("notifying seek instance")
+        playTracker.onSeek();
+    }
+
+    // handle previous button clicked
+    handlePreviousEvent() {
+        console.log("notifying prev instance")
+        playTracker.onPrevious();
+    }  
+
+    // handle next button clicked
+    handleNextEvent() {
+        console.log("notifying next instance")
+        playTracker.onNext();
+    }
+}
 
 function lastFmConnector(requestObj, callback) {
-    // connects to ext script
+    // connects to background script by sending msg
     let _req = requestObj;
     let _call = callback;
 
-    chrome.runtime.sendMessage("kafichdgndnfkcfgnbfjhfdbhclfhmpf",_req, _call);
+    chrome.runtime.sendMessage(_req, _call);
 
 };
 
-function scrobbleNowPlaying() {
-    // data 
-    let method = "POST";
-    let fmMethod = "track.updateNowPlaying";
-    let bodyData = trackObject.bodyData();
+// initialize script
+function init() {
+    lastFmConnector({type:'startScript'},
+    function() {
+        console.log("start script go");
+        setTimeout(() => {
+            console.log("start event listeners 2sec late");
+            const monitor = new EventMonitor();
+            monitor.setupListeners();
+        }, 2000)
+    })
+}
 
-    // call method
-    lastFmConnector({
-        method,
-        fmMethod,
-        bodyData,
-        type: "authreq"
-    },
-    function(response) {
-        console.log(response.msg)
-    }
-    );
-};
-
-document.addEventListener('load', getSessionKey(setupListeners));
+init();
