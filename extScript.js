@@ -32,7 +32,11 @@ async function getLastFmToken() {
 
         if (response.ok) {
             let _token = await response.json();
-            storeToken(_token.token)
+            lastFmConnector({
+                type: "saveToken",
+                token: _token['token']
+            })
+            /* storeToken(_token.token) */
             return [_token['token'], null]
 
         } else {
@@ -95,7 +99,9 @@ function storeSessionKey({key, name, subscriber}) {
     // sets the session key and runs a callback function
     console.log(key, name, subscriber)
     chrome.storage.sync.set({
-        'scrobblerLastFM': {key, name, subscriber}
+        "session": key,
+        "username": name,
+        "subscriber": subscriber
     },
     function() {
         console.log(`${key} key has been stored`)
@@ -112,7 +118,7 @@ function storeToken(token, callback) {
 
     // store token
     chrome.storage.sync.set({
-        'tokenLastFM': _token
+        'token': _token
     }, _callback)
 };
 
@@ -160,7 +166,7 @@ function init() {
         };
 
         if (lastfm.session === null) {
-            document.querySelector(".messaging h4").innerHTML = "Yet to authorize?/n"
+            songTitle.innerHTML = "Yet to authorize? "
             + "click connect button then ALLOW-ACCESS on pop up and CLOSE the window after"
         }
 

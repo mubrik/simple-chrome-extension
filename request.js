@@ -91,23 +91,19 @@ function getToken(callback) {
     chrome.storage.sync.get('tokenLastFM', _callback)
 }
 
-function saveLocalData(idParam, storeParam, callback) {
+function saveToStorageSync(idParam, storeParam, callback) {
 
     let _storeId = String(idParam)
     let _storeItem = storeParam
     let _callback = callback || function() {
         console.log(`item with id ${_storeId} has been stored`);
-        getAllStorageSyncData();
+        storeAllStorageSyncDataLocal();
     }
 
     // store item
     chrome.storage.sync.set({
         [_storeId]: _storeItem
     }, _callback)
-}
-
-function fetchLocalData() {
-
 }
 
 function getAllStorageSyncData() {
@@ -125,30 +121,34 @@ function getAllStorageSyncData() {
     });
 }
 
-getAllStorageSyncData().then(items => {
-    // Copy the data retrieved from storage into storageCache.
-    Object.assign(lastfm, items);
-    console.log(lastfm)
-});
+function storeAllStorageSyncDataLocal() {
+
+    getAllStorageSyncData().then(items => {
+        // Copy the data retrieved from storage into storageCache.
+        Object.assign(lastfm, items);
+        console.log(lastfm)
+    });
+}
+
+storeAllStorageSyncDataLocal();
 
 chrome.runtime.onInstalled.addListener(
     function (param) {
 
         // check storage for already set valid variable
-        getAllStorageSyncData().then(items => {
-            // Copy the data retrieved from storage into storageCache.
-            Object.assign(lastfm, items);
-            console.log(lastfm)
-        });
+        storeAllStorageSyncDataLocal();
 
         // set variables to be used as null if not set/valid
-        if (lastfm.nowPlaying === undefined) {
-            saveLocalData("nowPlaying", null)
+        if (lastfm.isInstalled === undefined) {
+            saveToStorageSync("isInstalled", true)
+            saveToStorageSync("nowPlaying", null)
+            saveToStorageSync("session", null)
+            saveToStorageSync("token", null)
+            saveToStorageSync("subscriber", null)
+            saveToStorageSync("username", null)
         }
     }
 )
 
-
-
-getSessionKey();
-getToken();
+/* getSessionKey();
+getToken(); */

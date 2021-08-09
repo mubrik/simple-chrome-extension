@@ -53,9 +53,17 @@ chrome.runtime.onMessage.addListener(
                 ...lastfm
             })
 
+        } else if (request.type === "saveToken") {
+            console.log("ext save token")
+                saveToStorageSync("token", request.token)
+                
+        } else if (request.type === "saveSession") {
+            console.log("ext save session")
+                saveToStorageSync("token", request.token)
         } else if (request.type === "updateLocalNowPLaying") {
             if(request.artist && request.title) {
-                saveLocalData("nowPlaying",
+                console.log("backg s updating now playing")
+                saveToStorageSync("nowPlaying",
                     {
                         title: request.title,
                         artist: request.artist
@@ -64,4 +72,9 @@ chrome.runtime.onMessage.addListener(
             }
         }
     }
+);
+
+// when youtube music is closing, clean up
+chrome.runtime.onSuspend.addListener(
+    console.log("clean up")
 );
