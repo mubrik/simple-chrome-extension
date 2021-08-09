@@ -1,6 +1,8 @@
 let lastfm = {};
 
 const connectBtn = document.getElementById("connectBtn");
+const songTitle = document.querySelector(".now-playing .song-title");
+const songArtist = document.querySelector(".now-playing .song-artist");
 
 connectBtn.onclick = async (e) => {
 
@@ -26,7 +28,7 @@ connectBtn.onclick = async (e) => {
 async function getLastFmToken() {
     // fetch token to be used
     try {
-        let response = await fetch("http://ws.audioscrobbler.com/2.0/?method=auth.gettoken&api_key=ae2c676a4406b4a3afdbe1f31413b72c&format=json");
+        let response = await fetch(`http://ws.audioscrobbler.com/2.0/?method=auth.gettoken&api_key=${lastfm.apiKey}&format=json`);
 
         if (response.ok) {
             let _token = await response.json();
@@ -161,7 +163,12 @@ function init() {
             document.querySelector(".messaging h4").innerHTML = "Yet to authorize?/n"
             + "click connect button then ALLOW-ACCESS on pop up and CLOSE the window after"
         }
-    })
+
+        if (lastfm.nowPlaying !== null) {
+            songTitle.innerHTML = lastfm.nowPlaying.title
+            songArtist.innerHTML = lastfm.nowPlaying.artist
+        }
+    });
 }
 
 init();

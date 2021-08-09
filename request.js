@@ -91,5 +91,64 @@ function getToken(callback) {
     chrome.storage.sync.get('tokenLastFM', _callback)
 }
 
+function saveLocalData(idParam, storeParam, callback) {
+
+    let _storeId = String(idParam)
+    let _storeItem = storeParam
+    let _callback = callback || function() {
+        console.log(`item with id ${_storeId} has been stored`);
+        getAllStorageSyncData();
+    }
+
+    // store item
+    chrome.storage.sync.set({
+        [_storeId]: _storeItem
+    }, _callback)
+}
+
+function fetchLocalData() {
+
+}
+
+function getAllStorageSyncData() {
+    // Immediately return a promise and start asynchronous work
+    return new Promise((resolve, reject) => {
+      // Asynchronously fetch all data from storage.sync.
+      chrome.storage.sync.get(null, (items) => {
+        // Pass any observed errors down the promise chain.
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        // Pass the data retrieved from storage down the promise chain.
+        resolve(items);
+      });
+    });
+}
+
+getAllStorageSyncData().then(items => {
+    // Copy the data retrieved from storage into storageCache.
+    Object.assign(lastfm, items);
+    console.log(lastfm)
+});
+
+chrome.runtime.onInstalled.addListener(
+    function (param) {
+
+        // check storage for already set valid variable
+        getAllStorageSyncData().then(items => {
+            // Copy the data retrieved from storage into storageCache.
+            Object.assign(lastfm, items);
+            console.log(lastfm)
+        });
+
+        // set variables to be used as null if not set/valid
+        if (lastfm.nowPlaying === undefined) {
+            saveLocalData("nowPlaying", null)
+        }
+    }
+)
+
+
+
 getSessionKey();
 getToken();

@@ -29,7 +29,8 @@ chrome.runtime.onMessage.addListener(
             console.log(bodyData)
             /* makeAuthenticatedReq("POST", "track.scrobble", bodyData) */
             sendResponse({msg: "done"})
-        } else if (request.type === "startScript" || request.type === "extensionScript") {
+            
+        } else if (request.type === "contentScript" ) {
             console.log("should bg script start")
             // checks if content script should run
             if (lastfm.session && lastfm.token) {
@@ -44,15 +45,23 @@ chrome.runtime.onMessage.addListener(
                 });
             }
 
+        } else if (request.type === "extensionScript") {
+            // extension scripts requesting variables
+            console.log("ext script go")
+            sendResponse({
+                msg:true,
+                ...lastfm
+            })
+
+        } else if (request.type === "updateLocalNowPLaying") {
+            if(request.artist && request.title) {
+                saveLocalData("nowPlaying",
+                    {
+                        title: request.title,
+                        artist: request.artist
+                    }
+                )
+            }
         }
     }
 );
-
-/* chrome.alarms.create("tracker", { delayInMinutes: 1 })
-
-chrome.alarms.onAlarm.addListener(() => {
-    console.log("sending msg")
-    chrome.runtime.sendMessage({greeting: "hello"}, function(response) {
-        console.log(response.msg);
-    })
-}); */
