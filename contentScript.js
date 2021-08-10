@@ -5,17 +5,29 @@ class Song {
 
     constructor() {
         this.title = this.getCurrentTrackTitle();
-        this.artist = this.getCurrentTrackArtist();
-        this.year = this.getCurrentTrackYear();
-        this.album = this.getCurrentTrackAlbum();
+        this.details = this.getTrackDetails();
+        this.artist = this.details[0]
+        this.album = this.details[1]
+        this.year = this.details[2].replace(/\s+/g, '');
         this.timers = this.getCurrentTrackTime();
     }
 
     /**@returns {String} */
     getCurrentTrackTitle() {
-        let titleElement = document.querySelector('.middle-controls .title');
+        let titleElement = document.querySelector('yt-formatted-string.title.ytmusic-player-bar');
         return titleElement.innerText;
     };
+
+    /**@returns {Array} */
+    getTrackDetails() {
+        console.log(document.querySelector('yt-formatted-string.byline.ytmusic-player-bar'))
+        let detailList = document.querySelector('yt-formatted-string.byline.ytmusic-player-bar').textContent.split("•");
+        return detailList;
+    };
+
+    getTrackArtist() {
+        
+    }
 
     /**@returns {String} */
     getCurrentTrackArtist() {
@@ -82,6 +94,7 @@ class Tracker {
 
         // get song
         let _nowPlaying = new Song();
+        console.log(_nowPlaying)
 
         // get Id
         let _songId = this.getSongId(_nowPlaying);

@@ -1,6 +1,7 @@
 let lastfm = {};
 
 const connectBtn = document.getElementById("connectBtn");
+const messaging = document.querySelector(".messaging");
 const songTitle = document.querySelector(".now-playing .song-title");
 const songArtist = document.querySelector(".now-playing .song-artist");
 
@@ -68,7 +69,11 @@ async function getLastFmSession(token) {
 
         if (response.ok) {
             let _token = await response.json();
-            storeSessionKey(_token.session);
+            lastFmConnector({
+                type: "saveSession",
+                session: _token.session
+            })
+            /* storeSessionKey(_token.session); */
         } else {
             // handle error
             document.querySelector(".messaging h4").innerHTML = "oops, something went wrong. Did you allow access before closing?. Try again";
@@ -173,6 +178,10 @@ function init() {
         if (lastfm.nowPlaying !== null) {
             songTitle.innerHTML = lastfm.nowPlaying.title
             songArtist.innerHTML = lastfm.nowPlaying.artist
+        }
+        
+        if (lastfm.username !== null) {
+            messaging.innerHTML = `Welcome ${lastfm.username}`
         }
     });
 }

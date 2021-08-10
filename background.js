@@ -54,13 +54,23 @@ chrome.runtime.onMessage.addListener(
             })
 
         } else if (request.type === "saveToken") {
+
             console.log("ext save token")
-                saveToStorageSync("token", request.token)
+            saveToStorageSync("token", request.token)
                 
         } else if (request.type === "saveSession") {
+
             console.log("ext save session")
-                saveToStorageSync("token", request.token)
+            console.log(request)
+            chrome.storage.sync.set({
+                "session": request.session["key"],
+                "username": request.session["name"],
+                "subscriber": request.session["subscriber"]
+            })
+            storeAllStorageSyncDataLocal();
+
         } else if (request.type === "updateLocalNowPLaying") {
+
             if(request.artist && request.title) {
                 console.log("backg s updating now playing")
                 saveToStorageSync("nowPlaying",
