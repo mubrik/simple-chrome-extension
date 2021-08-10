@@ -149,6 +149,3 @@ chrome.runtime.onInstalled.addListener(
         }
     }
 )
-
-/* getSessionKey();
-getToken(); */

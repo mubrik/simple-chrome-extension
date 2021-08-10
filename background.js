@@ -5,8 +5,8 @@ chrome.runtime.onMessage.addListener(
 
             console.log(request)
             let bodyData = {
-                artist: request.track.artist,
-                title: request.track.title
+                artist: request.artist,
+                title: request.title
             }
             console.log(bodyData)
             /* makeAuthenticatedReq("POST", "track.updateNowPlaying", bodyData) */
@@ -18,12 +18,12 @@ chrome.runtime.onMessage.addListener(
             // get current time
             let utcTime = Date.now()
             // subtrack elapsed track time
-            let timestamp = utcTime - request.track.timers[0];
+            let timestamp = utcTime - request.timers[0];
 
             let bodyData = {
                 timestamp,
-                artist: request.track.artist,
-                title: request.track.title
+                artist: request.artist,
+                title: request.title
             }
 
             console.log(bodyData)

@@ -6,9 +6,9 @@ class Song {
     constructor() {
         this.title = this.getCurrentTrackTitle();
         this.details = this.getTrackDetails();
-        this.artist = this.details[0]
-        this.album = this.details[1]
-        this.year = this.details[2].replace(/\s+/g, '');
+        this.artist = this.details ? this.details[0] : null
+        this.album = this.details ? this.details[1] : null
+        this.year = this.details ? this.details[2].replace(/\s+/g, '') : null 
         this.timers = this.getCurrentTrackTime();
     }
 
@@ -20,14 +20,10 @@ class Song {
 
     /**@returns {Array} */
     getTrackDetails() {
-        console.log(document.querySelector('yt-formatted-string.byline.ytmusic-player-bar'))
         let detailList = document.querySelector('yt-formatted-string.byline.ytmusic-player-bar').textContent.split("•");
+        console.log(detailList)
         return detailList;
     };
-
-    getTrackArtist() {
-        
-    }
 
     /**@returns {String} */
     getCurrentTrackArtist() {
@@ -52,8 +48,8 @@ class Song {
     getCurrentTrackTime() {
 
         let timeElement = document.querySelector(".time-info").innerText.split("/")
-        let currentTime = timeElement[0]
-        let trackLength = timeElement[1]
+        let currentTime = timeElement[0];
+        let trackLength = timeElement[1];
     
         return [this.formatTimeValue(currentTime), this.formatTimeValue(trackLength)]
     };
@@ -73,6 +69,26 @@ class Song {
         return minutes + seconds;
     }
 
+    waitForElm(selector) {
+        return new Promise(resolve => {
+            if (document.querySelector(selector)) {
+                return resolve(document.querySelector(selector));
+            }
+    
+            const observer = new MutationObserver(mutations => {
+                if (document.querySelector(selector)) {
+                    resolve(document.querySelector(selector));
+                    observer.disconnect();
+                }
+            });
+    
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        });
+    }
+
     removeEmojis (string) {
         const regex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
         return string.replace(regex, '');
@@ -88,37 +104,18 @@ class Tracker {
         this.songMonitor = null;
         this.isSongPlaying = false;
         this.isSongScrobbled = false;
-    }
+    };
 
     onPlay() {
-
-        // get song
-        let _nowPlaying = new Song();
-        console.log(_nowPlaying)
-
-        // get Id
-        let _songId = this.getSongId(_nowPlaying);
-
-        // check if same
-        if (this.isSongTheSame(_songId)) {
-            // do something
-
-            // start interval checking, only if one doesnt exist already
-            if (this.songMonitor === null) {
-                this.trackSongChange();
-            }
-
-            // update instance
-            this.isSongPlaying = true;
-
-        } else {
-            this.onSongChange(_nowPlaying);
+        // if loop tracker isnt started
+        if (this.songMonitor === null) {
+            this.loopTracker();
         }
+        // update instance
+        this.isSongPlaying = true;
     };
 
     onPause() {
-
-        console.log(this.songMonitor);
 
         // update instance
         this.isSongPlaying = false;
@@ -137,51 +134,18 @@ class Tracker {
         if (this.isSongTheSame(_songId)) {
             let [currentTime, _] = _nowPlaying.timers;
             if (currentTime <= 5000) {
-                // call song change
-                this.onSongChange(_nowPlaying);
+
+                // if loop tracker isnt started
+                if (this.songMonitor === null) {
+                    this.loopTracker();
+                }
+
+                // update instance
+                this.isSongScrobbled = false;
+
             }
         }
-    }
-
-    onNext() {
-        // trigger on song change
     };
-
-    onPrevious() {
-        // clear this.playingtrack so track can scrobble on replay
-    };
-
-    /** @param {Song} song */
-    onSongChange(song) {
-        // song changed update instance
-
-        // store song
-        this.playingTrack = song;
-
-        // store new song Identfier
-        this.songId = this.getSongId(this.playingTrack);
-
-        // start interval checking, only if one doesnt exist already
-        if (this.songMonitor === null) {
-            this.trackSongChange();
-        }
-
-        // update instance
-        this.isSongPlaying = true;
-        this.isSongScrobbled = false;
-
-        // notify lastfm
-
-        // notify local store
-        lastFmConnector(
-            {
-                type: "updateLocalNowPLaying",
-                artist: this.playingTrack.artist,
-                title: this.playingTrack.title
-            }
-        )
-        
-    }
 
     /** 
     * @param {string} param
@@ -189,7 +153,7 @@ class Tracker {
     */
     isSongTheSame(param) {
         return (param === this.songId);
-    }
+    };
 
     /** 
     * @param {Song} song
@@ -200,7 +164,7 @@ class Tracker {
         let [current, duration] = song.timers;
         let half = duration / 2;
         return (current >= half);
-    }
+    };
 
     /** 
     * @param {Song} song
@@ -208,15 +172,17 @@ class Tracker {
     */
     getSongId(song) {
         return String(song["artist"]) + String(song["title"]);
-    }
+    };
 
-    trackSongChange() {
+    /* main event loop tracker, started by callback */
+    loopTracker() {
 
         this.songMonitor = setInterval(() => {
 
+            // run only if playing
             if (!this.isSongPlaying) {
                 console.log("song paused");
-                return
+                return;
             }
 
             let _songhalfway = false;
@@ -225,13 +191,48 @@ class Tracker {
             // get song
             let _nowPlaying = new Song();
 
+            // check if details are not null return if not
+            if (typeof _nowPlaying.artist !== "string" &&
+                typeof _nowPlaying.title !== "string" ) {
+                console.log("song details incorrect");
+                return;
+            };
+
             // get playing song ID
             let _songId = this.getSongId(_nowPlaying);
 
-            if (this.isSongTheSame(_songId) 
-                && this.isSongScrobbled) {
-                    console.log("song has been scrobbled")
+            // is song same?
+            if (this.isSongTheSame(_songId)) {
+
+                console.log("song same")
+                // if scrobbled
+                if (this.isSongScrobbled) {
+                    console.log("song scrobbled")
                     return;
+                }
+
+                _songSame = true;
+
+            } else {
+                // song is new
+                // store song
+                console.log("new song")
+                this.playingTrack = _nowPlaying;
+
+                // store id
+                this.songId = this.getSongId(_nowPlaying);
+
+                // clear scrobble
+                this.isSongScrobbled = false;
+
+                // notify lastfm
+                lastFmConnector(
+                    {
+                        type: "updateLocalNowPLaying",
+                        artist: this.playingTrack.artist,
+                        title: this.playingTrack.title
+                    }
+                );
             }
 
             // check duration
@@ -239,41 +240,33 @@ class Tracker {
                 console.log("song halfway")
                 _songhalfway = true;
 
-            } else {
-                // do nothing or implement log current time
-                console.log("song not halfway")
-            }
-
-            // check if song is the same
-            if (this.isSongTheSame(_songId)) {
-                console.log("song same")
-                _songSame = true;
-
-            } else {
-                // song changed do something
-                console.log("song changed")
-                this.onSongChange(_nowPlaying);
             }
 
             // only scrobble if song is same and past halfway
             if (_songhalfway 
                 && _songSame) {
                     // scrobble to lastfm
+                    lastFmConnector(
+                        {
+                            type: "scrobble",
+                            artist: this.playingTrack.artist,
+                            title: this.playingTrack.title,
+                            timers: this.playingTrack.timers,
+                        }
+                    );
 
-                    // cancel monitoring
+                    // update instance
                     this.isSongScrobbled = true;
                 }
 
-            
-        }, 12000);
-    }
+        }, 8000);
+    };
 };
 
 /* class handle player events */
 class EventMonitor {
 
     constructor() {
-
         this.videoElem = document.querySelector(".html5-video-container").children[0];
     }
 
@@ -308,18 +301,6 @@ class EventMonitor {
         console.log("notifying seek instance")
         playTracker.onSeek();
     }
-
-    // handle previous button clicked
-    handlePreviousEvent() {
-        console.log("notifying prev instance")
-        playTracker.onPrevious();
-    }  
-
-    // handle next button clicked
-    handleNextEvent() {
-        console.log("notifying next instance")
-        playTracker.onNext();
-    }
 };
 
 function lastFmConnector(requestObj, callback) {
@@ -340,11 +321,8 @@ function init() {
     function(result) {
         if (result.msg) {
             console.log("start script go");
-            setTimeout(() => {
-                console.log("start event listeners 2sec late");
-                const monitor = new EventMonitor();
-                monitor.setupListeners();
-            }, 2000)
+            const monitor = new EventMonitor();
+            monitor.setupListeners();
         } else {
             console.log("not authorised")
         }

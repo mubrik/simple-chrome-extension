@@ -287,4 +287,194 @@ function lastFmConnector(requestObj, callback) {
 
 };
 
+
+class Tracker {
+
+    constructor() {
+        this.playingTrack = null;
+        this.songId = null;
+        this.songMonitor = null;
+        this.isSongPlaying = false;
+        this.isSongScrobbled = false;
+    }
+
+    onPlay() {
+
+        // get song
+        let _nowPlaying = new Song();
+        console.log(_nowPlaying)
+
+        // get Id
+        let _songId = this.getSongId(_nowPlaying);
+
+        // check if same
+        if (this.isSongTheSame(_songId)) {
+            // do something
+
+            // start interval checking, only if one doesnt exist already
+            if (this.songMonitor === null) {
+                this.trackSongChange();
+            }
+
+            // update instance
+            this.isSongPlaying = true;
+
+        } else {
+            this.onSongChange(_nowPlaying);
+        }
+    };
+
+    onPause() {
+
+        console.log(this.songMonitor);
+
+        // update instance
+        this.isSongPlaying = false;
+    };
+
+    onSeek() {
+        // seeking bar used, also applies if previous clicked
+        // check if time has been reset to < 00:05
+
+        // get song
+        let _nowPlaying = new Song();
+
+        // get Id
+        let _songId = this.getSongId(_nowPlaying);
+
+        if (this.isSongTheSame(_songId)) {
+            let [currentTime, _] = _nowPlaying.timers;
+            if (currentTime <= 5000) {
+                // call song change
+                this.onSongChange(_nowPlaying);
+            }
+        }
+    }
+
+    onNext() {
+        // trigger on song change
+    };
+
+    onPrevious() {
+        // clear this.playingtrack so track can scrobble on replay
+    };
+
+    /** @param {Song} song */
+    onSongChange(song) {
+        // song changed update instance
+
+        // store song
+        this.playingTrack = song;
+
+        // store new song Identfier
+        this.songId = this.getSongId(this.playingTrack);
+
+        // start interval checking, only if one doesnt exist already
+        if (this.songMonitor === null) {
+            this.trackSongChange();
+        }
+
+        // update instance
+        this.isSongPlaying = true;
+        this.isSongScrobbled = false;
+
+        // notify lastfm
+
+        // notify local store
+        lastFmConnector(
+            {
+                type: "updateLocalNowPLaying",
+                artist: this.playingTrack.artist,
+                title: this.playingTrack.title
+            }
+        )
+        
+    }
+
+    /** 
+    * @param {string} param
+    * @returns {boolean}
+    */
+    isSongTheSame(param) {
+        return (param === this.songId);
+    }
+
+    /** 
+    * @param {Song} song
+    * @returns {Boolean}
+    */
+    isSongHalfway(song) {
+
+        let [current, duration] = song.timers;
+        let half = duration / 2;
+        return (current >= half);
+    }
+
+    /** 
+    * @param {Song} song
+    * @returns {String}
+    */
+    getSongId(song) {
+        return String(song["artist"]) + String(song["title"]);
+    }
+
+    trackSongChange() {
+
+        this.songMonitor = setInterval(() => {
+
+            if (!this.isSongPlaying) {
+                console.log("song paused");
+                return
+            }
+
+            let _songhalfway = false;
+            let _songSame = false;
+
+            // get song
+            let _nowPlaying = new Song();
+
+            // get playing song ID
+            let _songId = this.getSongId(_nowPlaying);
+
+            if (this.isSongTheSame(_songId) 
+                && this.isSongScrobbled) {
+                    console.log("song has been scrobbled")
+                    return;
+            }
+
+            // check duration
+            if (this.isSongHalfway(_nowPlaying)){
+                console.log("song halfway")
+                _songhalfway = true;
+
+            } else {
+                // do nothing or implement log current time
+                console.log("song not halfway")
+            }
+
+            // check if song is the same
+            if (this.isSongTheSame(_songId)) {
+                console.log("song same")
+                _songSame = true;
+
+            } else {
+                // song changed do something
+                console.log("song changed")
+                this.onSongChange(_nowPlaying);
+            }
+
+            // only scrobble if song is same and past halfway
+            if (_songhalfway 
+                && _songSame) {
+                    // scrobble to lastfm
+
+                    // cancel monitoring
+                    this.isSongScrobbled = true;
+                }
+
+            
+        }, 12000);
+    }
+};
+
 document.addEventListener('load', setupListeners());
