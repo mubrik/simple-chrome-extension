@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrobbler</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+            margin: 2px;
+            min-width: 240px;
+        }
+
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messaging {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .now-playing {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-top: 0.3em;
+            border: 1px solid lightpink;
+        }
+
+        .settings {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-top: 0.3em;
+            border: 1px solid lightblue;
+        }
+        .unauthorized {
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-top: 0.3em;
+            border: 1px solid red;
+        }
+
+        .connect {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin-top: 0.3em;
+        }
+        .loveBtn {
+            height: 20px;
+            width: 30px;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="messaging">
+        <h4>Welcome to LastFm Scrobbler</h4>
+    </div>
+    <div class="unauthorized hidden">
+        <p style="margin: 0.2em;">
+            Yet to authorize?
+            click connect button to open lastfm then <strong>ALLOW-ACCESS</strong> on the pop up, <strong>CLOSE</strong> the window after.
+        </p>
+    </div>
+    <div class="now-playing flex-col hidden">
+        <p style="margin: 0.2em;">Now playing:</p>
+        <p class="song-title" style="margin: 0.2em;"></p>
+        <p class="song-artist" style="margin: 0.2em;"></p>
+        <p class="song-scrobbles" style="margin: 0.2em;"></p>
+        <div>
+            <img src="./images/love1.svg" class="loveBtn" name="likebtn">
+            <!-- <button id="shareBtn" style="margin: 0.2em;">share btn</button> -->
+        </div>
+    </div>
+    <div class="settings flex-col">
+        <p class="song-title" style="margin: 0.2em;">Settings:</p>
+        <div style="margin: 0.2em;">
+            <label for="scrobble"> Enable scrobble: </label>
+            <input type="checkbox" name="scrobble" id="scrobble-toggle" value="scrobble">
+        </div>
+        <label style="margin: 0.2em;"> Scrobble at:
+            <select name="scrobble-length" id="scrobble-length">
+                <option value="half"> Halfway </option>
+                <option value="end"> 90% </option>
+            </select>
+        </label>
+        <button id="connectBtn" style="margin: 0.2em;">Connect to LastFm</button>
+        <!-- <button id="testBtn" style="margin: 0.2em;">Test button</button> -->
+    </div>
+    <script src="./js/md5.js"></script>
+    <script src="./js/extScript.js"></script>
+</body>
+</html>

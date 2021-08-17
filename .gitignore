@@ -1,2 +1,3 @@
-# ignore env variable
+# ignore env variable and utf8 cloned module 
 keys.js
+utf8/

@@ -1,7 +1,5 @@
-console.log("wrapper script")
-
 try {
-    importScripts("keys.js","md5.js", "request.js","settings.js","background.js");
+    importScripts("./src/js/keys.js","./src/js/md5.js", "./src/js/utf8/utf8.js","./src/js/request.js","./src/js/background.js");
 } catch (error) {
     console.log(error);
 }

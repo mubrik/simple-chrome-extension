@@ -4,8 +4,14 @@
     "version": "1.0",
     "manifest_version": 3,
     "action": {
-        "default_popup": "index.html",
-        "default_icon": "logo192.png"
+        "default_popup": "./src/index.html",
+        "default_icon": "./src/images/logo128.png"
+    },
+    "icons": {
+      "16": "./src/images/logo16.png",
+      "32": "./src/images/logo32.png",
+      "48": "./src/images/logo48.png",
+      "128": "./src/images/logo128.png"
     },
     "commands": {
         "_execute_action": {
@@ -13,13 +19,12 @@
             "default": "Ctrl+Shift+F",
             "mac": "MacCtrl+Shift+F"
           },
-          "description": "Opens index.html"
+          "description": "Opens chrome scrobbler"
         }
     },
     "permissions": [
         "history",
-        "storage",
-        "alarms"
+        "storage"
     ],
     "host_permissions": [
         "https://music.youtube.com/*",
@@ -31,14 +36,13 @@
     "content_scripts": [
         {
           "matches": ["*://music.youtube.com/*"],
-          "js": ["contentScript.js"],
-          "run_at": "document_idle",
-          "all_frames": true
+          "js": ["./src/js/contentScript.js"],
+          "run_at": "document_idle"
         }
     ],
     "web_accessible_resources": [
       {
-        "resources": ["extScript.js"],
+        "resources": ["./src/js/extScript.js"],
         "matches": ["*://music.youtube.com/*"]
       }
     ]

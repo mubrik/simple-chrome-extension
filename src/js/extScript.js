@@ -1,22 +1,26 @@
 let lastfm = {};
 
 const connectBtn = document.getElementById("connectBtn");
+const testBtn = document.getElementById("testBtn");
+const loveBtn = document.querySelector(".loveBtn");
 const messaging = document.querySelector(".messaging");
+const unAuthMsg = document.querySelector(".unauthorized");
+const nowPlaying = document.querySelector(".now-playing");
 const songTitle = document.querySelector(".now-playing .song-title");
 const songArtist = document.querySelector(".now-playing .song-artist");
+const songScrobbles = document.querySelector(".now-playing .song-scrobbles");
+const scrobbleToggle = document.querySelector("#scrobble-toggle");
+const scrobbleSelect = document.querySelector("#scrobble-length");
+/* const shareBtn = document.querySelector("#shareBtn"); */
 
 connectBtn.onclick = async (e) => {
 
-    console.log('auth token');
     // get token
     let [token, error] = await getLastFmToken();
     if (token === null) {
         return;
     };
     lastfm.token = token;
-
-    // notify user of process
-    document.querySelector(".messaging h4").innerHTML = "Please click ALLOW-ACCESS on pop up and CLOSE the window after"
 
     // open browser to auth token to user
     showAuthWindow({
@@ -25,6 +29,62 @@ connectBtn.onclick = async (e) => {
     });
 };
 
+loveBtn.onclick = (e) => {
+    // set current is loved attribute
+    backgroundConnect({type:"updateLove"},
+
+    // callback to update html
+    function (params) {
+        if (params.status === "track.love") {
+            loveBtn.src = "./src/images/love.svg";
+        } else {
+            loveBtn.src = "./src/images/love1.svg";
+        }
+    });
+};
+
+scrobbleToggle.onchange = (e) => {
+    // update background setting
+    backgroundConnect({
+        type:"updateScrobbleSettings",
+        value: e.target.checked,
+    });
+};
+
+scrobbleSelect.onchange = (e) => {
+    backgroundConnect({
+        type:"updateScrobbleAt",
+        value: e.target.value
+    });
+    console.log(e.target.value)
+};
+
+/* shareBtn.onclick = (e) => {
+
+    backgroundConnect({
+        type:"getTrackInfo"
+    });
+}; */
+
+/* testBtn.onclick = async (e) => {
+
+    backgroundConnect({type: "newTab"})
+    chrome.tabs.create({
+        active: false,
+        url: "http://www.google.com"
+    }).then((tab) => {
+        console.log(tab)
+
+        chrome.scripting.executeScript(
+            {
+              target: {tabId: tab.id},
+              function: authTab,
+            },
+            (injectionResults) => {
+                console.log(injectionResults);
+            });
+    })
+} */
 
 async function getLastFmToken() {
     // fetch token to be used
@@ -33,11 +93,11 @@ async function getLastFmToken() {
 
         if (response.ok) {
             let _token = await response.json();
-            lastFmConnector({
+            backgroundConnect({
                 type: "saveToken",
                 token: _token['token']
             })
-            /* storeToken(_token.token) */
+
             return [_token['token'], null]
 
         } else {
@@ -58,7 +118,6 @@ async function getLastFmSession(token) {
     // use token and signature to get a session key
     let _token = token || lastfm.token
     if (!!!_token) {
-        console.log("invalid token")
         document.querySelector(".messaging h4").innerHTML = "oops, something went wrong. Try restarting browser";
         return
     }
@@ -69,11 +128,11 @@ async function getLastFmSession(token) {
 
         if (response.ok) {
             let _token = await response.json();
-            lastFmConnector({
+            backgroundConnect({
                 type: "saveSession",
                 session: _token.session
             })
-            /* storeSessionKey(_token.session); */
+
         } else {
             // handle error
             document.querySelector(".messaging h4").innerHTML = "oops, something went wrong. Did you allow access before closing?. Try again";
@@ -99,35 +158,7 @@ function getLastFmSignature(method, token) {
 
 };
 
-function storeSessionKey({key, name, subscriber}) {
-
-    // sets the session key and runs a callback function
-    console.log(key, name, subscriber)
-    chrome.storage.sync.set({
-        "session": key,
-        "username": name,
-        "subscriber": subscriber
-    },
-    function() {
-        console.log(`${key} key has been stored`)
-    }
-    )
-};
-
-function storeToken(token, callback) {
-
-    let _token = token;
-    let _callback = callback || function() {
-        console.log(`${_token} token has been stored`)
-    }
-
-    // store token
-    chrome.storage.sync.set({
-        'token': _token
-    }, _callback)
-};
-
-function lastFmConnector(requestObj, callback) {
+function backgroundConnect(requestObj, callback) {
     // connects to background script by sending msg
     let _req = requestObj;
     let _call = callback;
@@ -135,6 +166,12 @@ function lastFmConnector(requestObj, callback) {
     chrome.runtime.sendMessage(_req, _call);
 
 };
+
+function authTab() {
+    setInterval(()=> {
+        console.log(document.title)
+    }, 3000)
+}
 
 function showAuthWindow(options) {
     // change this to trigger on url change instead
@@ -163,7 +200,8 @@ function showAuthWindow(options) {
 
 function init() {
     // checks if session and token set
-    lastFmConnector({type:'extensionScript'},
+    backgroundConnect({type:'extensionScript'},
+    // callback
     function(result) {
         console.log(result)
         lastfm = {
@@ -171,17 +209,28 @@ function init() {
         };
 
         if (lastfm.session === null) {
-            songTitle.innerHTML = "Yet to authorize? "
-            + "click connect button then ALLOW-ACCESS on pop up and CLOSE the window after"
+            unAuthMsg.classList.remove("hidden");
+        } else {
+            connectBtn.innerText = "Connected";
+            nowPlaying.classList.remove("hidden");
         }
 
         if (lastfm.nowPlaying !== null) {
-            songTitle.innerHTML = lastfm.nowPlaying.title
-            songArtist.innerHTML = lastfm.nowPlaying.artist
+            songTitle.innerText = lastfm.nowPlaying.track;
+            songArtist.innerText = lastfm.nowPlaying.artist;
+            songScrobbles.innerText = `Scrobbles: ${lastfm.nowPlaying.playCount}`;
+            loveBtn.src = lastfm.nowPlaying.isLoved ? "./images/love.svg" : "./images/love1.svg";
         }
         
         if (lastfm.username !== null) {
-            messaging.innerHTML = `Welcome ${lastfm.username}`
+            messaging.innerText = `Welcome ${lastfm.username}`;
+        }
+
+        if (lastfm.scrobbleEnabled) {
+            scrobbleToggle.checked = true;
+            if (lastfm.scrobbleAt === "end") {
+                scrobbleSelect.children[1].selected = true;
+            }
         }
     });
 }
