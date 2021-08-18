@@ -17,15 +17,6 @@ chrome.runtime.onInstalled.addListener(
                 "scrobbleEnabled": true
             })
         };
-        /* if (lastfm.isInstalled === undefined) {
-            saveToStorageSync("isInstalled", true)
-            saveToStorageSync("nowPlaying", null)
-            saveToStorageSync("session", null)
-            saveToStorageSync("token", null)
-            saveToStorageSync("subscriber", null)
-            saveToStorageSync("username", null)
-            saveToStorageSync("scrobbleEnabled", true)
-        } */
     }
 )
 
@@ -34,8 +25,6 @@ function getLastFmSignedData(param) {
     // parameters
     let md5String = ""
     let _params = {
-        api_key: lastfm.apiKey,
-        sk: lastfm.session,
         ...param
     };
     
@@ -63,24 +52,13 @@ function getLastFmSignedData(param) {
 
 }
 
-function getLastFmUnSignedData(param) {
-    // parameters
-    let _params = {
-        api_key: lastfm.apiKey,
-        format: "json",
-        ...param
-    };
-    
-    console.log(_params)
-    return _params;
-}
-
 async function makeAuthenticatedReq (method, fmMethod, bodyData) {
 
     // parameters
     let _method = method;
     let lastfmMethod = fmMethod;
     let _body = bodyData;
+
     // get signed datat
     let signedData = getLastFmSignedData({
         ..._body,
@@ -102,6 +80,7 @@ async function makeAuthenticatedReq (method, fmMethod, bodyData) {
         if (response.ok) {
             let result = await response.json();
             console.log(result);
+            return result;
         } else {
             // handle error, should implement retry after moving logic to bg script
             let result = await response.text();
@@ -113,21 +92,14 @@ async function makeAuthenticatedReq (method, fmMethod, bodyData) {
     }
 };
 
-async function makeUnAuthenticatedReq(method, fmMethod, bodyData) {
+async function makeUnAuthenticatedReq(method, bodyData) {
 
     // parameters mostlikely get 
     let _method = method || "GET";
-    let lastfmMethod = fmMethod;
     let _body = bodyData;
 
-    // get unsigned datat
-    let unSignedData = getLastFmUnSignedData({
-        ..._body,
-        method: lastfmMethod
-    });
-
     // create urlencoded param for body 
-    let data = new URLSearchParams(unSignedData)
+    let data = new URLSearchParams(_body)
     console.log(data.toString())
 
     // fetch request
@@ -189,5 +161,81 @@ function storeAllStorageSyncDataLocal() {
         console.log(lastfm)
     });
 };
+
+function lastfmListener(tabId, changeInfo, tab) {
+    if (tab.url.match("last.fm/api/auth?")) {
+
+        console.log("matchh")
+
+        if (changeInfo.status === "complete") {
+            console.log("adding script")
+
+            chrome.scripting.executeScript(
+                {
+                  target: {tabId: tab.id},
+                  function: function() {
+                      return {
+                          title: window.document.title,
+                          url: window.document.location.href
+                      }
+                  }
+                },
+                (injectionResults) => {
+                    for (const frameResult of injectionResults)
+                        processUserAuth(frameResult);
+                }
+            )
+
+        }
+        /* Now, let's relieve ourselves from our listener duties */
+        /* chrome.tabs.onUpdated.removeListener(myListener); */
+        return;
+    }
+}
+
+async function processUserAuth({result}) {
+
+    console.log(result);
+
+    if (result.title.includes("Application authenticated")
+    && result.url.includes(lastfm.apiKey)) {
+
+        // if user authenticated our token, get a session key
+        // data to be used
+        let bodyData = {
+            method: "auth.getSession",
+            api_key: lastfm.apiKey,
+            token: lastfm.token
+        }
+
+        // method requires signature
+        let signedData = getLastFmSignedData(bodyData);
+
+        // get the session key
+        let sessionObj = await makeUnAuthenticatedReq("GET", signedData);
+
+        // error check
+        if (sessionObj) {
+
+            // store the session keys in sync storage
+            chrome.storage.sync.set({
+                "session": sessionObj.session["key"],
+                "username": sessionObj.session["name"],
+                "subscriber": sessionObj.session["subscriber"]
+            })
+            // store in cache storage
+            storeAllStorageSyncDataLocal();
+    
+            console.log("authenticated")
+        }
+
+    }
+
+    else if (result.title.includes("onnect application")
+    && result.url.includes(lastfm.apiKey)) {
+        console.log("connecting")
+    }
+
+}
 
 storeAllStorageSyncDataLocal();

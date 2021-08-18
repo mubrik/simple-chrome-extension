@@ -8,23 +8,30 @@ chrome.runtime.onMessage.addListener(
                 // set some vars
                 let userPlayCount = null;
                 let userLoved = false
+                let trackData = {
+                    artist: request.artist,
+                    track: request.title,
+                }
 
                 // lastfm request body data
                 let bodyData = {
-                    artist: request.artist,
-                    track: request.title
+                    ...trackData,
+                    api_key: lastfm.apiKey,
+                    sk: lastfm.session
                 }
                 // make auth call
                 makeAuthenticatedReq("POST", "track.updateNowPlaying", bodyData)
 
                 // get song details from latfm
-                makeUnAuthenticatedReq("GET", "track.getInfo", {
-                    ...bodyData,
-                    username: lastfm.username
+                makeUnAuthenticatedReq("GET", {
+                    ...trackData,
+                    api_key: lastfm.apiKey,
+                    username: lastfm.username,
+                    method: "track.getInfo",
+                    format: "json"
                 }).then(result => {
 
                     if (result.track) {
-                        console.log(result)
                         userPlayCount = result.track.userplaycount;
                         userLoved = result.track.userloved === "0" ? false : true;
                     }
@@ -32,7 +39,7 @@ chrome.runtime.onMessage.addListener(
                     // store in sync storage
                     saveToStorageSync("nowPlaying",
                         {
-                            ...bodyData,
+                            ...trackData,
                             playCount: userPlayCount,
                             isLoved: userLoved
                         }
@@ -53,7 +60,9 @@ chrome.runtime.onMessage.addListener(
             let bodyData = {
                 timestamp:timestampSec,
                 artist: request.artist,
-                track: request.title
+                track: request.title,
+                api_key: lastfm.apiKey,
+                sk: lastfm.session
             }
             // make auth call
             if (lastfm.scrobbleEnabled) {
@@ -62,6 +71,29 @@ chrome.runtime.onMessage.addListener(
             // callback
             sendResponse({msg: "done"})
             
+        } else if (request.type === "updateLove") {
+
+            // lastfm request body data
+            let bodyData = {
+                artist: lastfm.nowPlaying.artist,
+                track: lastfm.nowPlaying.track,
+                api_key: lastfm.apiKey,
+                sk: lastfm.session
+            }
+            // check current storage for love status
+            let isLove = lastfm.nowPlaying.isLoved ? "track.unlove" : "track.love";
+
+            // make req based on check
+            makeAuthenticatedReq("POST", isLove, bodyData)
+
+            // update sync storage
+            saveToStorageSync("nowPlaying", {
+                ...lastfm.nowPlaying,
+                isLoved: !lastfm.nowPlaying.isLoved
+            })
+            // callback
+            sendResponse({msg:true, status: isLove})
+
         } else if (request.type === "contentScript" ) {
 
             // checks if content script should run
@@ -97,27 +129,6 @@ chrome.runtime.onMessage.addListener(
             })
             storeAllStorageSyncDataLocal();
 
-        } else if (request.type === "updateLove") {
-
-            // lastfm request body data
-            let bodyData = {
-                artist: lastfm.nowPlaying.artist,
-                track: lastfm.nowPlaying.track
-            }
-            // check current storage for love status
-            let isLove = lastfm.nowPlaying.isLoved ? "track.unlove" : "track.love";
-
-            // make req based on check
-            makeAuthenticatedReq("POST", isLove, bodyData)
-
-            // update sync storage
-            saveToStorageSync("nowPlaying", {
-                ...lastfm.nowPlaying,
-                isLoved: !lastfm.nowPlaying.isLoved
-            })
-            // callback
-            sendResponse({msg:true, status: isLove})
-
         } else if (request.type === "updateScrobbleSettings") {
 
             // update scrobbleenabled value in storage
@@ -129,7 +140,8 @@ chrome.runtime.onMessage.addListener(
             saveToStorageSync("scrobbleAt", request.value);
 
         } else if (request.type === "unloading") {
-            console.log("music player closing")
+            // when youtube music is closing, clean up
+            chrome.storage.sync.set({"nowPlaying": null})
 
         } else if (request.type === "getTrackInfo") {
             // experimental
@@ -141,39 +153,20 @@ chrome.runtime.onMessage.addListener(
             }
             makeUnAuthenticatedReq("GET", "track.getInfo", bodyData) */
 
-        } else if (request.type === "newTab") {
-            // experimental
-            /* chrome.tabs.create({
-                active: false,
-                url: "https://www.google.com/"
-            }, 
-            
-            function (tab) {
-                console.log(tab)
-
-                chrome.scripting.executeScript(
-                    {
-                      target: {tabId: tab.id},
-                      function: function () {
-                            setInterval(()=> {
-                                console.log(window.document.title)
-                            }, 3000)
-                      },
-                    },
-                    (injectionResults) => {
-                        console.log(injectionResults);
-                    }
-                );
-
-
-            }) */
+        } else if (request.type === "authUser") {
+            // experimental, creates the auth tab
+            chrome.tabs.create({
+                active: true,
+                url: request.url
+            })
         }
     }
 );
 
-// when youtube music is closing, clean up
-chrome.runtime.onSuspend.addListener(
-    console.log("clean up")
-    // this triggers on background script, not chrome or yt music closing
-    // less useful, need to implement clean up logic for now playing object
-);
+chrome.tabs.onUpdated.addListener(lastfmListener);
+
+// if extension installed and session key available, remove listener
+// if (lastfm.isInstalled && lastfm.session) {
+//     chrome.tabs.onUpdated.removeListener(lastfmListener)
+// }
+// not needed, wouldnt trigger if user ever revoked key, tweak implementation

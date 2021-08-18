@@ -24,11 +24,14 @@
     },
     "permissions": [
         "history",
-        "storage"
+        "storage",
+        "tabs",
+        "scripting"
     ],
     "host_permissions": [
         "https://music.youtube.com/*",
-        "http://ws.audioscrobbler.com/"
+        "http://ws.audioscrobbler.com/",
+        "https://www.last.fm/api/*"
     ],
     "background": {
       "service_worker": "background-wrapper.js"
