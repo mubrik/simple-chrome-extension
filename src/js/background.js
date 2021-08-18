@@ -94,6 +94,12 @@ chrome.runtime.onMessage.addListener(
             // callback
             sendResponse({msg:true, status: isLove})
 
+        } else if (request.type === "authUser") {
+            // creates the auth tab
+            chrome.tabs.create({
+                active: true,
+                url: request.url
+            })
         } else if (request.type === "contentScript" ) {
 
             // checks if content script should run
@@ -143,6 +149,36 @@ chrome.runtime.onMessage.addListener(
             // when youtube music is closing, clean up
             chrome.storage.sync.set({"nowPlaying": null})
 
+        } else if (request.type === "nowplaying") {
+            // experimental moving scrobble and now playing logic from content script here
+            // validation
+            if (request.artist && request.title) {
+
+                // params
+                let trackData = {
+                    id: request.id,
+                    artist: request.artist,
+                    track: request.title,
+                    timers: request.timers,
+                    isPlaying: request.isPlaying
+                }
+    
+                // compare with storage cache now playing
+                if (!(trackData.id === lastfm.nowPlaying.id)) {
+                    // not same track, update now playing
+                    updateTrackLastFM(trackData);
+
+                    // update local
+                    updateTrackLocal(trackData);
+                }
+    
+                // check timers
+                if (isSongAtScrobbleTime(trackData)) {
+                    // scrobble, checks for settings implemented
+                    scrobbleTrackToLastFm(trackData)
+                }
+            }
+
         } else if (request.type === "getTrackInfo") {
             // experimental
             // fetch track info
@@ -153,13 +189,7 @@ chrome.runtime.onMessage.addListener(
             }
             makeUnAuthenticatedReq("GET", "track.getInfo", bodyData) */
 
-        } else if (request.type === "authUser") {
-            // experimental, creates the auth tab
-            chrome.tabs.create({
-                active: true,
-                url: request.url
-            })
-        }
+        } 
     }
 );
 

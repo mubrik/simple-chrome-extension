@@ -127,11 +127,18 @@ async function makeAuthenticatedReq (method, fmMethod, bodyData) {
         if (response.ok) {
             let result = await response.json();
             console.log(result);
-            return result;
+            return {
+                ok: true,
+                response: result
+            }
         } else {
             // handle error, should implement retry after moving logic to bg script
             let result = await response.text();
             console.log(result);
+            return {
+                ok: false,
+                response: result
+            }
         }
 
     } catch (error) {
@@ -169,8 +176,7 @@ async function makeUnAuthenticatedReq(method, bodyData) {
     } catch (error) {
         console.log(error);
     }
-}
-
+};
 
 function lastfmListener(tabId, changeInfo, tab) {
 
@@ -204,7 +210,7 @@ function lastfmListener(tabId, changeInfo, tab) {
         /* chrome.tabs.onUpdated.removeListener(myListener); */
         return;
     }
-}
+};
 
 async function processUserAuth({result}) {
 
@@ -250,6 +256,110 @@ async function processUserAuth({result}) {
         // do something
     }
 
+};
+
+function scrobbleTrackToLastFm(song) {
+    // experimental, prepares scrobble data and makes request
+    // get current time in ms
+    let utcTime = Date.now()
+    // subtrack elapsed track time
+    let timestamp = utcTime - song.timers[0];
+    // convert to seconds
+    let timestampSec = Math.floor(timestamp / 1000);
+    // lastfm request body data
+    let bodyData = {
+        timestamp:timestampSec,
+        artist: song.artist,
+        track: song.title,
+        api_key: lastfm.apiKey,
+        sk: lastfm.session
+    }
+    // make auth call
+    if (lastfm.scrobbleEnabled) {
+        makeAuthenticatedReq("POST", "track.scrobble", bodyData)
+        .then(result => {
+            if (result.ok) {
+                // store in sync storage
+                saveToStorageSync("nowPlaying",
+                {
+                    
+                    playCount: userPlayCount,
+                    isLoved: userLoved,
+                    isScrobbled: true
+                }
+                )
+            }
+        })
+    }
+}
+
+function updateTrackLastFM(song) {
+    // experimental, prepares track nowplaying data and makes request
+
+    // lastfm request body data
+    let bodyData = {
+        artist: song.artist,
+        track: song.title,
+        api_key: lastfm.apiKey,
+        sk: lastfm.session
+    }
+    // make auth call
+    makeAuthenticatedReq("POST", "track.updateNowPlaying", bodyData);
+}
+
+function updateTrackLocal(song) {
+    // experimental, gets track data and makes request
+
+    // set some vars
+    let userPlayCount = null;
+    let userLoved = false
+
+    // get song details related to user from lastfm
+    makeUnAuthenticatedReq("GET", 
+    {
+        artist: song.artist,
+        track: song.title,
+        api_key: lastfm.apiKey,
+        username: lastfm.username,
+        method: "track.getInfo",
+        format: "json"
+    })
+    .then(result => {
+
+        if (result.track) {
+            userPlayCount = result.track.userplaycount;
+            userLoved = result.track.userloved === "0" ? false : true;
+        }
+
+        // store in sync storage
+        saveToStorageSync("nowPlaying",
+            {
+                ...song,
+                playCount: userPlayCount,
+                isLoved: userLoved,
+                isScrobbled: false
+            }
+        )
+    })
+}
+
+function isSongAtScrobbleTime(song) {
+    // get timers from obj
+    let [current, duration] = song.timers;
+
+        if (duration <= 30000) {
+            // if track is less than 30s, false so never scrobbles
+            return false;
+        }
+
+        if (lastfm.scrobbleAt === "end") {
+            // get 90% duration of track
+            let timer = duration * 0.9;
+            return (current >= timer);
+        }
+
+        let timer = duration / 2;
+        return (current >= timer);
 }
 
 // call this on every run to fetch sync storage to storagecache
