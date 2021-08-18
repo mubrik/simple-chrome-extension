@@ -20,7 +20,52 @@ chrome.runtime.onInstalled.addListener(
     }
 )
 
+function getAllStorageSyncData() {
+    // Immediately return a promise and start asynchronous work
+    return new Promise((resolve, reject) => {
+      // Asynchronously fetch all data from storage.sync.
+      chrome.storage.sync.get(null, (items) => {
+        // Pass any observed errors down the promise chain.
+        if (chrome.runtime.lastError) {
+          return reject(chrome.runtime.lastError);
+        }
+        // Pass the data retrieved from storage down the promise chain.
+        resolve(items);
+      });
+    });
+};
+
+function storeAllStorageSyncDataLocal() {
+
+    // Copy the data retrieved from storage into storageCache.
+    getAllStorageSyncData()
+    .then(items => {
+        Object.assign(lastfm, items);
+        console.log(lastfm)
+    });
+};
+
+function saveToStorageSync(idParam, storeParam, callback) {
+    // stores item to sync storage
+    // callback to storage cache
+
+    let _storeId = String(idParam)
+    let _storeItem = storeParam
+    let _callback = callback || function() {
+        // after every storage update, call this to update instance storageCache
+        storeAllStorageSyncDataLocal();
+    }
+
+    // store item
+    chrome.storage.sync.set({
+        [_storeId]: _storeItem
+    }, _callback)
+};
+
 function getLastFmSignedData(param) {
+    // for making signed lastfm calls
+    // creates md5 signature from given object
+    // insert a api_sig sey and format=json for lastfm response
 
     // parameters
     let md5String = ""
@@ -28,31 +73,33 @@ function getLastFmSignedData(param) {
         ...param
     };
     
-    // make string from sorted keys and value
+    // make string from sorted keys and value as per lastfm requirement
     const sortedKeys = Object.keys(_params).sort();
     sortedKeys.forEach((item) => {
         // utf8 encoded params as lastfm requires it
-        // utf8 encoder only works with strings
+        // utf8 encoder only works with strings, change timestamp (or all?) to string
         if (item === "timestamp") {
             md5String += item + utf8.encode(String(_params[item]))
             return;
         }
         md5String += item + utf8.encode(_params[item])
     })
-    md5String += lastfm.apiSecret;
-    console.log(md5String)
 
+    // secret should always be last, lastfm requirement
+    md5String += lastfm.apiSecret;
+    // get md5
     let _md5 = md5(md5String);
 
     // add signature and response format after
     _params["api_sig"] = _md5
     _params["format"] = "json"
-    console.log(_md5, _params)
+    console.log(md5String, _params)
     return _params;
 
 }
 
 async function makeAuthenticatedReq (method, fmMethod, bodyData) {
+    // makes authenticated/signed call request to lastfm
 
     // parameters
     let _method = method;
@@ -94,6 +141,8 @@ async function makeAuthenticatedReq (method, fmMethod, bodyData) {
 
 async function makeUnAuthenticatedReq(method, bodyData) {
 
+    // makes GET or unauth calls to lastfm 
+
     // parameters mostlikely get 
     let _method = method || "GET";
     let _body = bodyData;
@@ -122,58 +171,21 @@ async function makeUnAuthenticatedReq(method, bodyData) {
     }
 }
 
-function saveToStorageSync(idParam, storeParam, callback) {
-
-    let _storeId = String(idParam)
-    let _storeItem = storeParam
-    let _callback = callback || function() {
-        // after every storage update, call this to update instance storageCache
-        storeAllStorageSyncDataLocal();
-    }
-
-    // store item
-    chrome.storage.sync.set({
-        [_storeId]: _storeItem
-    }, _callback)
-};
-
-function getAllStorageSyncData() {
-    // Immediately return a promise and start asynchronous work
-    return new Promise((resolve, reject) => {
-      // Asynchronously fetch all data from storage.sync.
-      chrome.storage.sync.get(null, (items) => {
-        // Pass any observed errors down the promise chain.
-        if (chrome.runtime.lastError) {
-          return reject(chrome.runtime.lastError);
-        }
-        // Pass the data retrieved from storage down the promise chain.
-        resolve(items);
-      });
-    });
-};
-
-function storeAllStorageSyncDataLocal() {
-
-    // Copy the data retrieved from storage into storageCache.
-    getAllStorageSyncData().then(items => {
-        
-        Object.assign(lastfm, items);
-        console.log(lastfm)
-    });
-};
 
 function lastfmListener(tabId, changeInfo, tab) {
-    if (tab.url.match("last.fm/api/auth?")) {
 
-        console.log("matchh")
+    // listener for user authorization
+    if (tab.url.match("last.fm/api/auth?")) {
+        // match if user navigates to auth page
 
         if (changeInfo.status === "complete") {
-            console.log("adding script")
+            // insert script after loading complete to prevent dupes
 
             chrome.scripting.executeScript(
                 {
                   target: {tabId: tab.id},
                   function: function() {
+                      // return the title and url of auth page
                       return {
                           title: window.document.title,
                           url: window.document.location.href
@@ -181,6 +193,7 @@ function lastfmListener(tabId, changeInfo, tab) {
                   }
                 },
                 (injectionResults) => {
+                    // send return value to process
                     for (const frameResult of injectionResults)
                         processUserAuth(frameResult);
                 }
@@ -208,7 +221,7 @@ async function processUserAuth({result}) {
             token: lastfm.token
         }
 
-        // method requires signature
+        // lastfm method requires signature
         let signedData = getLastFmSignedData(bodyData);
 
         // get the session key
@@ -225,17 +238,19 @@ async function processUserAuth({result}) {
             })
             // store in cache storage
             storeAllStorageSyncDataLocal();
-    
-            console.log("authenticated")
+
+            // remove listener
+            chrome.tabs.onUpdated.removeListener(lastfmListener);
         }
 
     }
 
     else if (result.title.includes("onnect application")
     && result.url.includes(lastfm.apiKey)) {
-        console.log("connecting")
+        // do something
     }
 
 }
 
+// call this on every run to fetch sync storage to storagecache
 storeAllStorageSyncDataLocal();

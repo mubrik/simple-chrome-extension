@@ -3,6 +3,7 @@ let lastfm = {};
 const connectBtn = document.getElementById("connectBtn");
 const loveBtn = document.querySelector(".loveBtn");
 const messaging = document.querySelector(".messaging");
+const errors = document.querySelector(".errors");
 const unAuthMsg = document.querySelector(".unauthorized");
 const nowPlaying = document.querySelector(".now-playing");
 const songTitle = document.querySelector(".now-playing .song-title");
@@ -49,8 +50,8 @@ connectBtn.onclick = async (e) => {
     };
     lastfm.token = token;
 
+    // changed process from pop up to chrome.tabs by background script
     // open browser to auth token to user
-    // changed from pop up to chrome.tabs by background script
     /* showAuthWindow({
         path: `http://www.last.fm/api/auth/?api_key=${lastfm.apiKey}&token=${token}`,
         callback: (token) => getLastFmSession(token)
@@ -86,11 +87,11 @@ scrobbleToggle.onchange = (e) => {
 };
 
 scrobbleSelect.onchange = (e) => {
+    // update background setting
     backgroundConnect({
         type:"updateScrobbleAt",
         value: e.target.value
     });
-    console.log(e.target.value)
 };
 
 async function getLastFmToken() {
@@ -108,14 +109,14 @@ async function getLastFmToken() {
             return [_token['token'], null]
 
         } else {
-            // api invalid most likely
-            document.querySelector(".messaging h4").innerHTML = "Error, please contact developer"
+            // api key invalid most likely
+            document.querySelector(".messaging h4").innerText = "Error, please contact developer"
             return [null, null]
         }
 
     } catch (error) {
         // handle server unreachable error
-        document.querySelector(".messaging h4").innerHTML = "Could not reach lastfm, Please Try again later";
+        document.querySelector(".messaging h4").innerText = "Could not reach lastfm, Please Try again later";
         return [null, error]
     }
 };
@@ -139,29 +140,37 @@ function init() {
             ...result
         };
 
+        // if user authorized token and session available
         if (lastfm.session === null) {
+            
             unAuthMsg.classList.remove("hidden");
         } else {
             connectBtn.innerText = "Connected";
             nowPlaying.classList.remove("hidden");
         }
 
+        // if a track is playing
         if (lastfm.nowPlaying !== null) {
             songTitle.innerText = lastfm.nowPlaying.track;
             songArtist.innerText = lastfm.nowPlaying.artist;
             songScrobbles.innerText = `Scrobbles: ${lastfm.nowPlaying.playCount}`;
             loveBtn.src = lastfm.nowPlaying.isLoved ? "./images/love.svg" : "./images/love1.svg";
         }
-        
+        // if username is present
         if (lastfm.username !== null) {
             messaging.innerText = `Welcome ${lastfm.username}`;
         }
 
+        // scrobble options
         if (lastfm.scrobbleEnabled) {
             scrobbleToggle.checked = true;
             if (lastfm.scrobbleAt === "end") {
                 scrobbleSelect.children[1].selected = true;
             }
+        }
+        // errors
+        if (lastfm.errors !== null) {
+            // do something, notify user
         }
     });
 }

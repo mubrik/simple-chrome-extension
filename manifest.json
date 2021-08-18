@@ -13,15 +13,6 @@
       "48": "./src/images/logo48.png",
       "128": "./src/images/logo128.png"
     },
-    "commands": {
-        "_execute_action": {
-          "suggested_key": {
-            "default": "Ctrl+Shift+F",
-            "mac": "MacCtrl+Shift+F"
-          },
-          "description": "Opens chrome scrobbler"
-        }
-    },
     "permissions": [
         "history",
         "storage",

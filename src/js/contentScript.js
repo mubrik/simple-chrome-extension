@@ -12,37 +12,41 @@ class Song {
         this.timers = this.getCurrentTrackTime();
     }
 
-    /**@returns {String} */
+    /** gets track title from player bar
+     * @returns {String} 
+     * */
     getCurrentTrackTitle() {
         let titleElement = document.querySelector('yt-formatted-string.title.ytmusic-player-bar');
         return titleElement.innerText;
     };
 
-    /**@returns {Array} */
+    /** gets track other details from player bar
+     * @returns {Array} 
+     * */
     getTrackDetails() {
         let trackDetailsElem = document.querySelector('yt-formatted-string.byline.ytmusic-player-bar');
         let detailsList = trackDetailsElem ? trackDetailsElem.textContent.split("•") : null;
         return detailsList;
     };
 
-    /**@returns {String} */
-    getCurrentTrackArtist() {
-        let artistElement = document.querySelector(".middle-controls .complex-string").children[0];
-        return artistElement.innerText;
-    };
+    // /**@returns {String} */
+    // getCurrentTrackArtist() {
+    //     let artistElement = document.querySelector(".middle-controls .complex-string").children[0];
+    //     return artistElement.innerText;
+    // };
 
-    /**@returns {String} */
-    getCurrentTrackAlbum() {
-        // hit or miss on correct album
-        let albumElement = document.querySelector(".middle-controls .complex-string").children[2];
-        return albumElement.innerText;
-    };
+    // /**@returns {String} */
+    // getCurrentTrackAlbum() {
+    //     // hit or miss on correct album
+    //     let albumElement = document.querySelector(".middle-controls .complex-string").children[2];
+    //     return albumElement.innerText;
+    // };
 
-    /**@returns {String} */
-    getCurrentTrackYear() {
-        let yearElement = document.querySelector(".middle-controls .complex-string").children[4];
-        return yearElement.innerText;
-    };
+    // /**@returns {String} */
+    // getCurrentTrackYear() {
+    //     let yearElement = document.querySelector(".middle-controls .complex-string").children[4];
+    //     return yearElement.innerText;
+    // };
 
     /**@returns {Array} */
     getCurrentTrackTime() {
@@ -61,6 +65,17 @@ class Song {
     formatTimeValue(str) {
         // split time
         let timeArr = str.split(":")
+
+        if(timeArr.length === 3) {
+            // time is in hours
+
+            // convert to int and multiply to get millisec
+            let hours = parseInt(timeArr[0]) * 3600000
+            let minutes = parseInt(timeArr[1]) * 60000
+            let seconds = parseInt(timeArr[2]) * 1000
+        
+            return hours + minutes + seconds;
+        }
     
         // convert to int and multiply to get millisec
         let minutes = parseInt(timeArr[0]) * 60000
@@ -287,7 +302,6 @@ class EventMonitor {
     // handles track starts playing
     handlePlayEvent() {
         setTimeout(() => {
-
             playTracker.onPlay();
         }, 1000)
     }
@@ -332,15 +346,6 @@ function waitForElm(selector) {
     });
 };
 
-/* chrome.runtime.onMessage.addListener(
-    function(request, sender, sendResponse) {
-        console.log(request)
-        if (request.type === "updateTrackScrobbleAt") {
-            playTracker.setVar("scrobbleAt", request.value)
-        }
-    }
-) */
-
 // initialize script
 function init() {
     lastFmConnector({type:'contentScript'},
@@ -355,11 +360,23 @@ function init() {
     })
 };
 
-// wait for video elemment to be present in DOM before init
-waitForElm("video").then(elem => {
-    init();
-})
-
+// youtube music player closing
 window.addEventListener('beforeunload', function (e) {
     lastFmConnector({type:"unloading"})
 });
+
+// wait for video element to be present in DOM before init
+waitForElm("video")
+.then(elem => {
+    init();
+})
+
+// experimental
+/* chrome.runtime.onMessage.addListener(
+    function(request, sender, sendResponse) {
+        console.log(request)
+        if (request.type === "updateTrackScrobbleAt") {
+            playTracker.setVar("scrobbleAt", request.value)
+        }
+    }
+) */
