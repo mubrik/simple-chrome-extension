@@ -13,6 +13,8 @@ class Song {
     this.year = this.details ? this.details[2].trim() : null;
     this.id = this.getTrackId();
     this.timers = this.getCurrentTrackTime();
+    this.isVideo = this.isTrackVideo();
+    this.isPaused = this.isTrackPaused();
   }
 
   /** gets track title from player bar
@@ -46,28 +48,6 @@ class Song {
     return id;
   }
 
-  // /**@returns {String} */
-  // getCurrentTrackArtist() {
-  // let artistElement = document
-  // .querySelector(".middle-controls .complex-string").children[0];
-  //     return artistElement.innerText;
-  // };
-
-  // /**@returns {String} */
-  // getCurrentTrackAlbum() {
-  //     // hit or miss on correct album
-  // let albumElement = document
-  // .querySelector(".middle-controls .complex-string").children[2];
-  //     return albumElement.innerText;
-  // };
-
-  // /**@returns {String} */
-  // getCurrentTrackYear() {
-  // let yearElement = document
-  //  .querySelector(".middle-controls .complex-string").children[4];
-  //     return yearElement.innerText;
-  // };
-
   /** @return {Array} */
   getCurrentTrackTime() {
     const timeEmt = document.querySelector(".time-info").innerText.split("/");
@@ -78,6 +58,34 @@ class Song {
       this.formatTimeValue(currentTime),
       this.formatTimeValue(trackLength),
     ];
+  }
+
+  /** checks if the current song is a video
+   * @return {Boolean}
+  */
+  isTrackVideo() {
+    // check if details are correct
+    if (this.details === null) {
+      return false;
+    }
+
+    if (this.album.includes("views") &&
+    this.year.includes("likes")) {
+      return true;
+    }
+    return false;
+  }
+
+  /** checks if song paused
+   * @return {Boolean}
+  */
+  isTrackPaused() {
+    const pauseElem = document.querySelector(".play-pause-button");
+    if (pauseElem.title === "Play") {
+      return true;
+    } else {
+      return false;
+    };
   }
 
   /**
@@ -118,236 +126,16 @@ class Song {
   }
 }
 
-/* class monitors play progress */
-// class Tracker {
-
-//     constructor(param) {
-//         this.playingTrack = null;
-//         this.songId = null;
-//         this.songMonitor = null;
-//         this.isSongPlaying = false;
-//         this.isSongScrobbled = false;
-//         this.scrobbleAt = param.scrobbleAt || "half";
-//     };
-
-//     setVar(param, value) {
-//         // updates instance
-//         this[param] = value
-//     }
-
-//     onPlay() {
-//         // if loop tracker isnt started
-//         if (this.songMonitor === null) {
-//             this.loopRewrite();
-//         }
-//         // update instance
-//         this.isSongPlaying = true;
-//     };
-
-//     onPause() {
-
-//         // update instance
-//         this.isSongPlaying = false;
-//     };
-
-//     onSeek() {
-//         // seeking bar used, also applies if previous clicked
-//         // check if time has been reset to < 00:05
-
-//         // get song
-//         let _nowPlaying = new Song();
-
-//         // get Id
-//         // let _songId = this.getSongId(_nowPlaying);
-
-//         let [currentTime, _] = _nowPlaying.timers;
-
-//         // if track was seeked to < 10secs mark
-//         if (currentTime <= 10000) {
-
-//             // if loop tracker isnt started
-//             if (this.songMonitor === null) {
-//                 this.loopRewrite();
-//             }
-
-//             // notify background script
-//             lastFmConnector({
-//                 type: "trackSeek"
-//             })
-
-//             // update instance
-//             // this.isSongScrobbled = false;
-
-//         }
-//     };
-
-//     /**
-//     * @param {string} param
-//     * @returns {boolean}
-//     */
-//     isSongTheSame(param) {
-//         return (param === this.songId);
-//     };
-
-//     /**
-//     * @param {Song} song
-//     * @returns {Boolean}
-//     */
-//     isSongHalfway(song) {
-
-//         let [current, duration] = song.timers;
-
-//         if (duration <= 30000) {
-//             // if track is less than 30s, false so never scrobbles
-//             return false;
-//         }
-
-//         if (this.scrobbleAt === "end") {
-//             console.log("scrobbling at end")
-//             // get 90% duration of track
-//             let timer = duration * 0.9;
-//             return (current >= timer);
-//         }
-
-//         let timer = duration / 2;
-//         return (current >= timer);
-//     };
-
-//     /**
-//     * @param {Song} song
-//     * @returns {String}
-//     */
-//     getSongId(song) {
-//         return String(song["artist"]) + String(song["title"]);
-//     };
-
-//     /* main event loop tracker logic,
-//     performs multiple instance checks,
-//     if song is the same, or scrobbled
-//     if song is halway
-//     started by callback to background script
-//     */
-//     loopRewrite() {
-
-//         this.songMonitor = setInterval(() => {
-
-//             // run only if playing
-//             if (!this.isSongPlaying) {
-//                 return;
-//             }
-
-//             // get song
-//             let _nowPlaying = new Song();
-
-//             // check if details are not null return if not
-//             if (typeof _nowPlaying.artist !== "string" &&
-//                 typeof _nowPlaying.title !== "string" ) {
-//                 return;
-//             };
-
-//             // get playing song ID
-//             let _songId = this.getSongId(_nowPlaying);
-
-//             // send to background
-//             lastFmConnector({
-//                 type: "playingSong",
-//                 ..._nowPlaying,
-//                 id: _songId,
-//             })
-//         }, 6000);
-//     }
-
-//     loopTracker() {
-
-//         this.songMonitor = setInterval(() => {
-
-//             // run only if playing
-//             if (!this.isSongPlaying) {
-//                 return;
-//             }
-
-//             let _songhalfway = false;
-//             let _songSame = false;
-
-//             // get song
-//             let _nowPlaying = new Song();
-
-//             // check if details are not null return if not
-//             if (typeof _nowPlaying.artist !== "string" &&
-//                 typeof _nowPlaying.title !== "string" ) {
-//                 return;
-//             };
-
-//             // get playing song ID
-//             let _songId = this.getSongId(_nowPlaying);
-
-//             // is song same?
-//             if (this.isSongTheSame(_songId)) {
-
-//                 // if scrobbled
-//                 if (this.isSongScrobbled) {
-//                     console.log("song scrobbled")
-//                     return;
-//                 }
-
-//                 _songSame = true;
-
-//             } else {
-//                 // song is new
-//                 // store song
-//                 console.log("new song")
-//                 this.playingTrack = _nowPlaying;
-
-//                 // store id
-//                 this.songId = this.getSongId(_nowPlaying);
-
-//                 // clear scrobble
-//                 this.isSongScrobbled = false;
-
-//                 // notify lastfm
-//                 lastFmConnector(
-//                     {
-//                         type: "updateLocalNowPLaying",
-//                         artist: this.playingTrack.artist,
-//                         title: this.playingTrack.title
-//                     }
-//                 );
-//             }
-
-//             // check duration
-//             if (this.isSongHalfway(_nowPlaying)){
-//                 _songhalfway = true;
-
-//             }
-
-//             // only scrobble if song is same and past halfway
-//             if (_songhalfway
-//                 && _songSame) {
-//                     // scrobble to lastfm
-//                     lastFmConnector(
-//                         {
-//                             type: "scrobble",
-//                             artist: this.playingTrack.artist,
-//                             title: this.playingTrack.title,
-//                             timers: this.playingTrack.timers,
-//                         }
-//                     );
-
-//                     // update instance
-//                     this.isSongScrobbled = true;
-//             }
-
-//         }, 6000);
-//     };
-// };
-
 /** class handle player events */
 class EventMonitor {
-  /** class handle player events */
-  constructor() {
+  /** class handle player events
+   * @param {Boolean} init - if the player should log songs
+   */
+  constructor(init) {
     this.videoElem = document.querySelector("video");
     this.songMonitor = null;
     this.isSongPlaying = false;
+    this.initiated = init || false;
   }
 
   /** setup event listeners */
@@ -365,12 +153,27 @@ class EventMonitor {
    * @param {Event} param
    */
   handleGeneral(param) {
-    console.log("stalled");
-    console.log(param);
+    // do something
+  }
+
+  /** check if to run*/
+  handleInit() {
+    lastFmConnector({type: "contentScript"}, function(result) {
+      if (result.msg) {
+        this.initiated = true;
+      } else {
+        this.initiated = false;
+      }
+    }.bind(this));
   }
 
   /** handles track starts playing */
   handlePlayEvent() {
+    // check if to progress
+    if (!this.initiated) {
+      this.handleInit();
+      return;
+    }
     // check if there's no loop tracker running
     if (this.songMonitor === null) {
       // start loop
@@ -382,15 +185,17 @@ class EventMonitor {
 
   /** handle track paused */
   handlePauseEvent() {
-    /* playTracker.onPause(); */
-
     // update instance
     this.isSongPlaying = false;
   }
 
   /** handle track seeking */
   handleSeekingEvent() {
-    // playTracker.onSeek();
+    // check if to progress
+    if (!this.initiated) {
+      this.handleInit();
+      return;
+    }
 
     // get song
     const _nowPlaying = new Song();
@@ -401,7 +206,7 @@ class EventMonitor {
     if (currentTime <= 10000) {
       // if loop tracker isnt started
       if (this.songMonitor === null) {
-        this.loopRewrite();
+        this.loopTracker();
       }
 
       // notify background script
@@ -415,24 +220,17 @@ class EventMonitor {
   loopTracker() {
     // start loop interval and save ID
     this.songMonitor = setInterval(() => {
-      // run only if song is playing
-      if (!this.isSongPlaying) {
-        return;
-      }
-
       // get song
       const _nowPlaying = new Song();
 
-      // check if details are not null return if null
-      if (
-        typeof _nowPlaying.artist !== "string" &&
-                typeof _nowPlaying.title !== "string"
-      ) {
+      // run only if song is playing
+      if (_nowPlaying.isPaused) {
         return;
       }
-
-      // get playing song ID
-      //   const _songId = this.getSongId(_nowPlaying);
+      // check if details are not string return
+      if (_nowPlaying.details === null || _nowPlaying.details === undefined) {
+        return;
+      };
 
       // send to background
       lastFmConnector({
@@ -485,15 +283,12 @@ function waitForElm(selector) {
     });
   });
 }
+
 /** initialize script */
 function init() {
   lastFmConnector({type: "contentScript"}, function(result) {
-    if (result.msg) {
-      window.playMonitor = new EventMonitor();
-      playMonitor.setupListeners();
-    } else {
-      console.log("not authorised");
-    }
+    window.playMonitor = new EventMonitor(result.msg);
+    playMonitor.setupListeners();
   });
 }
 
@@ -506,13 +301,3 @@ window.addEventListener("beforeunload", function(e) {
 waitForElm("video").then((elem) => {
   init();
 });
-
-// experimental
-/* chrome.runtime.onMessage.addListener(
-    function(request, sender, sendResponse) {
-        console.log(request)
-        if (request.type === "updateTrackScrobbleAt") {
-            playTracker.setVar("scrobbleAt", request.value)
-        }
-    }
-) */

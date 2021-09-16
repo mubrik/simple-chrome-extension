@@ -4,73 +4,7 @@ chrome.tabs.onUpdated.addListener(lastfmListener);
 /** listener for messages from contentscript/extscript */
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    if (request.type === "updateLocalNowPLaying") {
-      // make sure variables are valid
-      if (request.artist && request.title) {
-        // set some vars
-        let userPlayCount = null;
-        let userLoved = false;
-        const trackData = {
-          artist: request.artist,
-          track: request.title,
-        };
-
-        // lastfm request body data
-        const bodyData = {
-          ...trackData,
-          api_key: lastfm.apiKey,
-          sk: lastfm.session,
-        };
-        // make auth call
-        makeAuthenticatedReq("POST", "track.updateNowPlaying", bodyData);
-
-        // get song details from latfm
-        makeUnAuthenticatedReq("GET", {
-          ...trackData,
-          api_key: lastfm.apiKey,
-          username: lastfm.username,
-          method: "track.getInfo",
-          format: "json",
-        }).then((result) => {
-          if (result.track) {
-            userPlayCount = result.track.userplaycount;
-            userLoved = result.track.userloved === "0" ? false : true;
-          }
-
-          // store in sync storage
-          saveToStorageSync("nowPlaying",
-            {
-              ...trackData,
-              playCount: userPlayCount,
-              isLoved: userLoved,
-            },
-          );
-        });
-        // callback
-        sendResponse({msg: "done"});
-      }
-    } else if (request.type === "scrobble") {
-      // get current time in ms
-      const utcTime = Date.now();
-      // subtrack elapsed track time
-      const timestamp = utcTime - request.timers[0];
-      // convert to seconds
-      const timestampSec = Math.floor(timestamp / 1000);
-      // lastfm request body data
-      const bodyData = {
-        timestamp: timestampSec,
-        artist: request.artist,
-        track: request.title,
-        api_key: lastfm.apiKey,
-        sk: lastfm.session,
-      };
-      // make auth call
-      if (lastfm.scrobbleEnabled) {
-        makeAuthenticatedReq("POST", "track.scrobble", bodyData);
-      }
-      // callback
-      sendResponse({msg: "done"});
-    } else if (request.type === "updateLove") {
+    if (request.type === "updateLove") {
       // lastfm request body data
       const bodyData = {
         artist: lastfm.nowPlaying.artist,
@@ -139,6 +73,7 @@ chrome.runtime.onMessage.addListener(
         {
           id: null,
           isScrobbled: false,
+          isPlayingOnLastfm: false,
         },
       );
     } else if (request.type === "playingSong") {
@@ -151,9 +86,8 @@ chrome.runtime.onMessage.addListener(
           artist: request.artist,
           track: request.title,
           timers: request.timers,
+          isVideo: request.isVideo,
         };
-
-        console.log(trackData);
 
         // compare with storage cache now playing
         if (!(trackData.id === lastfm.nowPlaying.id)) {
@@ -180,6 +114,7 @@ chrome.runtime.onMessage.addListener(
       saveToStorageSync("nowPlaying", {
         id: null,
         isScrobbled: false,
+        isPlayingOnLastfm: false,
       });
     } else if (request.type === "getTrackInfo") {
       // experimental
@@ -199,4 +134,4 @@ chrome.runtime.onMessage.addListener(
 // if (lastfm.isInstalled && lastfm.session) {
 //     chrome.tabs.onUpdated.removeListener(lastfmListener)
 // }
-// not needed, wouldnt trigger if user ever revoked key, tweak implementation
+// not needed, if user ever revokes key unable to listen, tweak implementation

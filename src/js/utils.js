@@ -6,11 +6,23 @@ chrome.runtime.onInstalled.addListener(
   function(param) {
     // set variables to be used as null if not set/valid or hasnt been installed
     if (lastfm.isScrobblerInstalled === undefined ) {
-      console.log("new install");
+      // set variables
       chrome.storage.sync.set({
         "isScrobblerInstalled": true,
-        ...lastfm,
+        "session": null,
+        "token": null,
+        "username": null,
+        "nowPlaying": {
+          id: null,
+          isScrobbled: false,
+          isPlayingOnLastfm: false,
+        },
+        "scrobbleEnabled": true,
+        "scrobbleAt": "half",
+        "errors": null,
       });
+      // store variables in storagecache
+      storeAllStorageSyncDataLocal();
     };
   },
 );
@@ -38,7 +50,6 @@ function storeAllStorageSyncDataLocal() {
   getAllStorageSyncData()
     .then((items) => {
       Object.assign(lastfm, items);
-      console.log(lastfm);
     });
 };
 
@@ -99,7 +110,6 @@ function getLastFmSignedData(param) {
   // add signature and response format after
   _params["api_sig"] = _md5;
   _params["format"] = "json";
-  console.log(md5String, _params);
   return _params;
 }
 
@@ -135,7 +145,6 @@ async function makeAuthenticatedReq(method, fmMethod, bodyData) {
 
     if (response.ok) {
       const result = await response.json();
-      console.log(result);
       return {
         ok: true,
         response: result,
@@ -143,7 +152,6 @@ async function makeAuthenticatedReq(method, fmMethod, bodyData) {
     } else {
       // handle error, should implement retry logic
       const result = await response.text();
-      console.log(result);
       return {
         ok: false,
         response: result,
@@ -151,7 +159,6 @@ async function makeAuthenticatedReq(method, fmMethod, bodyData) {
     }
   } catch (error) {
     // net disconnect, fail gracefully
-    console.log(error);
     return {
       ok: false,
       response: error,
@@ -182,7 +189,7 @@ async function makeUnAuthenticatedReq(method, bodyData) {
       const result = await response.json();
       return {
         ok: true,
-        response: result.track,
+        response: result,
       };
     } else {
       // handle error, should implement retry after moving logic to bg script
@@ -257,15 +264,16 @@ async function processUserAuth({result}) {
     const signedData = getLastFmSignedData(bodyData);
 
     // get the session key
-    const sessionObj = await makeUnAuthenticatedReq("GET", signedData);
+    const response = await makeUnAuthenticatedReq("GET", signedData);
 
     // error check
-    if (sessionObj) {
+    if (response.ok) {
+      const {session} = response.response;
       // store the session keys in sync storage
       chrome.storage.sync.set({
-        "session": sessionObj.session["key"],
-        "username": sessionObj.session["name"],
-        "subscriber": sessionObj.session["subscriber"],
+        "session": session["key"],
+        "username": session["name"],
+        "subscriber": session["subscriber"],
       });
       // store in cache storage
       storeAllStorageSyncDataLocal();
@@ -353,34 +361,42 @@ function updateTrackLocal(song) {
   // set some vars
   let userPlayCount = null;
   let userLoved = false;
-
+  // body data
+  const bodyData = {
+    artist: song.artist,
+    track: song.track,
+    api_key: lastfm.apiKey,
+    username: lastfm.username,
+    method: "track.getInfo",
+    format: "json",
+  };
   // get song details related to user from lastfm
-  makeUnAuthenticatedReq("GET",
-    {
-      artist: song.artist,
-      track: song.track,
-      api_key: lastfm.apiKey,
-      username: lastfm.username,
-      method: "track.getInfo",
-      format: "json",
-    })
+  makeUnAuthenticatedReq("GET", bodyData)
     .then((result) => {
-      // if get req successful update vars
-      if (result.ok) {
-        userPlayCount = result.response.userplaycount;
-        userLoved = result.response.userloved === "0" ? false : true;
+      try {
+        if (result.ok) {
+          // if get req successful update vars
+          const {track} = result.response;
+          // req can be successful but lastfm doesnt know the song
+          if (track) {
+            userPlayCount = track.userplaycount;
+            userLoved = track.userloved === "0" ? false : true;
+          };
+        }
+      } catch (error) {
+        // skip error, requset failed
+      } finally {
+        // if error occurs still, store in sync storage
+        saveToStorageSync("nowPlaying",
+          {
+            ...song,
+            playCount: userPlayCount,
+            isLoved: userLoved,
+            isScrobbled: false,
+            isPlayingOnLastfm: false,
+          },
+        );
       }
-
-      // store in sync storage
-      saveToStorageSync("nowPlaying",
-        {
-          ...song,
-          playCount: userPlayCount,
-          isLoved: userLoved,
-          isScrobbled: false,
-          isPlayingOnLastfm: false,
-        },
-      );
     });
 };
 

@@ -1,6 +1,6 @@
 {
-    "name": "Chrome Lastfm Scrobbler",
-    "description": "Chrome Lastfm Scrobbler",
+    "name": "Chrome Youtube music Lastfm Scrobbler",
+    "description": "Lastfm Scrobbler for youtube music",
     "version": "1.0",
     "manifest_version": 3,
     "action": {
@@ -14,7 +14,6 @@
       "128": "./src/images/logo128.png"
     },
     "permissions": [
-        "history",
         "storage",
         "tabs",
         "scripting"

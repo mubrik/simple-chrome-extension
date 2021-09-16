@@ -138,7 +138,6 @@ function init() {
   backgroundConnect({type: "extensionScript"},
     // callback
     function(result) {
-      console.log(result);
       lastfm = {
         ...result,
       };
@@ -148,6 +147,7 @@ function init() {
         unAuthMsg.classList.remove("hidden");
       } else {
         connectBtn.innerText = "LastFM Connected";
+        connectBtn.style.backgroundColor = "aquamarine";
         nowPlaying.classList.remove("hidden");
       }
 
