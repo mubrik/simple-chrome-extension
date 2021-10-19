@@ -5,25 +5,31 @@ chrome.runtime.onInstalled.addListener(
   // run on first install or update
   function(param) {
     // set variables to be used as null if not set/valid or hasnt been installed
-    if (lastfm.isScrobblerInstalled === undefined ) {
-      // set variables
-      chrome.storage.sync.set({
-        "isScrobblerInstalled": true,
-        "session": null,
-        "token": null,
-        "username": null,
-        "nowPlaying": {
-          id: null,
-          isScrobbled: false,
-          isPlayingOnLastfm: false,
-        },
-        "scrobbleEnabled": true,
-        "scrobbleAt": "half",
-        "errors": null,
+    getAllStorageSyncData()
+      .then((items) => {
+        Object.assign(lastfm, items);
+      })
+      .finally(() => {
+        if (lastfm.isScrobblerInstalled === undefined ) {
+        // set variables
+          chrome.storage.sync.set({
+            "isScrobblerInstalled": true,
+            "session": null,
+            "token": null,
+            "username": null,
+            "nowPlaying": {
+              id: null,
+              isScrobbled: false,
+              isPlayingOnLastfm: false,
+            },
+            "scrobbleEnabled": true,
+            "scrobbleAt": "half",
+            "errors": null,
+          });
+          // store variables in storagecache
+          storeAllStorageSyncDataLocal();
+        };
       });
-      // store variables in storagecache
-      storeAllStorageSyncDataLocal();
-    };
   },
 );
 /** gets all sync storage data
@@ -135,14 +141,13 @@ async function makeAuthenticatedReq(method, fmMethod, bodyData) {
   const data = new URLSearchParams(signedData);
 
   // make request
-  const myReq = new Request("http://ws.audioscrobbler.com/2.0/", {
+  const myReq = new Request("https://ws.audioscrobbler.com/2.0/", {
     method: _method,
     body: data,
   });
 
   try {
     const response = await fetch(myReq);
-
     if (response.ok) {
       const result = await response.json();
       return {
@@ -151,7 +156,7 @@ async function makeAuthenticatedReq(method, fmMethod, bodyData) {
       };
     } else {
       // handle error, should implement retry logic
-      const result = await response.text();
+      const result = await response.json();
       return {
         ok: false,
         response: result,
@@ -181,7 +186,7 @@ async function makeUnAuthenticatedReq(method, bodyData) {
 
   // fetch request
   try {
-    const response = await fetch("http://ws.audioscrobbler.com/2.0/?" + data.toString(), {
+    const response = await fetch("https://ws.audioscrobbler.com/2.0/?" + data.toString(), {
       method: _method,
     });
 
@@ -311,8 +316,31 @@ function scrobbleTrackToLastFm(song) {
     makeAuthenticatedReq("POST", "track.scrobble", bodyData)
       .then((result) => {
         // update storage scrobble status
-        if (result.ok) {
-          // store in sync storage
+        if (result.ok && lastfm.errors !== null) {
+          // clear any error
+          saveToStorageSync("errors", null);
+        } else if (!result.ok) {
+          console.log(result);
+          if ("error" in result.response) {
+            // extract error
+            const {error} = result.response;
+            // error 9 is invalid session
+            if (error === 9 ) {
+              saveToStorageSync("errors",
+                {
+                  error: true,
+                  message: "Invalid session key - Please re-authenticate",
+                },
+              );
+            }
+          }
+          return false;
+        }
+        return true;
+      })
+      .then((result) => {
+        // finally store in sync storage
+        if (result) {
           saveToStorageSync("nowPlaying",
             {
               ...lastfm.nowPlaying,
@@ -340,8 +368,29 @@ function updateTrackLastFM(song) {
   // make auth call
   makeAuthenticatedReq("POST", "track.updateNowPlaying", bodyData)
     .then((result) => {
-      if (result.ok) {
-        // store in sync storage
+      if (result.ok && lastfm.errors !== null) {
+        // clear any error
+        saveToStorageSync("errors", null);
+      } else if (!result.ok) {
+        console.log(result);
+        if ("error" in result.response) {
+          const {error} = result.response;
+          if (error === 9 ) {
+            saveToStorageSync("errors",
+              {
+                error: true,
+                message: "Invalid session key - Please re-authenticate",
+              },
+            );
+          }
+        }
+        return false;
+      }
+      return true;
+    })
+    .then((result) => {
+      // finally store in sync storage
+      if (result) {
         saveToStorageSync("nowPlaying",
           {
             ...lastfm.nowPlaying,
@@ -422,4 +471,4 @@ function isSongAtScrobbleTime(song) {
 
   const timer = duration / 2;
   return (current >= timer);
-}
+};

@@ -135,7 +135,7 @@ class EventMonitor {
     this.videoElem = document.querySelector("video");
     this.songMonitor = null;
     this.isSongPlaying = false;
-    this.initiated = init || false;
+    /* this.initiated = init || false; */
   }
 
   /** setup event listeners */
@@ -157,7 +157,7 @@ class EventMonitor {
   }
 
   /** check if to run*/
-  handleInit() {
+  /* handleInit() {
     lastFmConnector({type: "contentScript"}, function(result) {
       if (result.msg) {
         this.initiated = true;
@@ -165,15 +165,15 @@ class EventMonitor {
         this.initiated = false;
       }
     }.bind(this));
-  }
+  } */
 
   /** handles track starts playing */
   handlePlayEvent() {
     // check if to progress
-    if (!this.initiated) {
+    /* if (!this.initiated) {
       this.handleInit();
       return;
-    }
+    } */
     // check if there's no loop tracker running
     if (this.songMonitor === null) {
       // start loop
@@ -192,10 +192,10 @@ class EventMonitor {
   /** handle track seeking */
   handleSeekingEvent() {
     // check if to progress
-    if (!this.initiated) {
+    /* if (!this.initiated) {
       this.handleInit();
       return;
-    }
+    } */
 
     // get song
     const _nowPlaying = new Song();
@@ -256,7 +256,7 @@ class EventMonitor {
 function lastFmConnector(requestObj, callback) {
   const _req = requestObj;
   const _call = callback;
-
+  console.log("contet scrip msg", _req, _call);
   chrome.runtime.sendMessage(_req, _call);
 }
 
@@ -286,10 +286,9 @@ function waitForElm(selector) {
 
 /** initialize script */
 function init() {
-  lastFmConnector({type: "contentScript"}, function(result) {
-    window.playMonitor = new EventMonitor(result.msg);
-    playMonitor.setupListeners();
-  });
+  window.playMonitor = new EventMonitor(true);
+  playMonitor.setupListeners();
+  console.log("content script loaded");
 }
 
 // youtube music player closing

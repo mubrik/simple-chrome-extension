@@ -74,7 +74,7 @@
             click connect button to open lastfm then <strong>ALLOW-ACCESS</strong>.
         </p>
     </div>
-    <div class="errors hidden">
+    <div class="errors unauthorized hidden">
         <p style="margin: 0.2em;"></p>
     </div>
     <div class="now-playing flex-col hidden">
@@ -101,6 +101,11 @@
         </label>
         <button id="connectBtn" style="margin: 0.2em;">Connect to LastFm</button>
         <!-- <button id="testBtn" style="margin: 0.2em;">Test button</button> -->
+    </div>
+    <div id="linkDiv" class="settings flex-col hidden">
+        <button id="userLink" href="">
+            Your LastFM Profile
+        </button>
     </div>
     <script src="./js/md5.js"></script>
     <script src="./js/extScript.js"></script>

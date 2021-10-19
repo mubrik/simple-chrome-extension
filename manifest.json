@@ -20,7 +20,7 @@
     ],
     "host_permissions": [
         "https://music.youtube.com/*",
-        "http://ws.audioscrobbler.com/",
+        "https://ws.audioscrobbler.com/",
         "https://www.last.fm/api/*"
     ],
     "background": {

@@ -4,6 +4,7 @@ chrome.tabs.onUpdated.addListener(lastfmListener);
 /** listener for messages from contentscript/extscript */
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
+    console.log("backg received", request);
     if (request.type === "updateLove") {
       // lastfm request body data
       const bodyData = {
@@ -25,6 +26,12 @@ chrome.runtime.onMessage.addListener(
       });
       // callback
       sendResponse({msg: true, status: isLove});
+    } else if (request.type === "userProfile") {
+      // creates the auth tab
+      chrome.tabs.create({
+        active: true,
+        url: request.url,
+      });
     } else if (request.type === "authUser") {
       // creates the auth tab
       chrome.tabs.create({
@@ -80,6 +87,9 @@ chrome.runtime.onMessage.addListener(
       // experimental moving scrobble/now playing logic from content script here
       // validation
       if (request.artist && request.title) {
+        if (lastfm.session === null) {
+          return;
+        }
         // params
         const trackData = {
           id: request.id,

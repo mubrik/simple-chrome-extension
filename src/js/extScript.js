@@ -2,17 +2,20 @@ let lastfm = {};
 
 const connectBtn = document.getElementById("connectBtn");
 const loveBtn = document.querySelector(".loveBtn");
-const messaging = document.querySelector(".messaging");
-const unAuthMsg = document.querySelector(".unauthorized");
+const messaging = document.querySelector(".messaging h4");
+const userLinkBtn = document.querySelector("#userLink");
+const userLinkDiv = document.querySelector("#linkDiv");
+const unAuthMsg = document.querySelector(".unauthorized p");
 const nowPlaying = document.querySelector(".now-playing");
 const songTitle = document.querySelector(".now-playing .song-title");
 const songArtist = document.querySelector(".now-playing .song-artist");
 const songScrobbles = document.querySelector(".now-playing .song-scrobbles");
 const scrobbleToggle = document.querySelector("#scrobble-toggle");
 const scrobbleSelect = document.querySelector("#scrobble-length");
+const errors = document.querySelector(".errors");
+const errorElement = document.querySelector(".errors p");
 
 /* experimental */
-/* const errors = document.querySelector(".errors"); */
 /* const testBtn = document.getElementById("testBtn"); */
 /* const shareBtn = document.querySelector("#shareBtn"); */
 
@@ -49,17 +52,18 @@ connectBtn.onclick = async (e) => {
   };
   lastfm.token = token;
 
-  // changed process from pop up to chrome.tabs by background script
-  // open browser to auth token to user
-  /* showAuthWindow({
-        path: `http://www.last.fm/api/auth/?api_key=${lastfm.apiKey}&token=${token}`,
-        callback: (token) => getLastFmSession(token)
-    }); */
-
   // background script auth process
   backgroundConnect({
     type: "authUser",
     url: `http://www.last.fm/api/auth/?api_key=${lastfm.apiKey}&token=${token}`,
+  });
+};
+
+userLinkBtn.onclick = async (e) => {
+  // background script create tab
+  backgroundConnect({
+    type: "userProfile",
+    url: `https://www.last.fm/user/${lastfm.username}`,
   });
 };
 
@@ -162,6 +166,7 @@ function init() {
       // if username is present
       if (lastfm.username !== null) {
         messaging.innerText = `Welcome ${lastfm.username}`;
+        userLinkDiv.classList.remove("hidden");
       }
 
       // scrobble options
@@ -174,6 +179,8 @@ function init() {
       // errors
       if (lastfm.errors !== null) {
         // do something, notify user
+        errors.classList.remove("hidden");
+        errorElement.innerText = lastfm.errors.message;
       }
     });
 }
