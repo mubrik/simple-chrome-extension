@@ -256,7 +256,6 @@ class EventMonitor {
 function lastFmConnector(requestObj, callback) {
   const _req = requestObj;
   const _call = callback;
-  console.log("contet scrip msg", _req, _call);
   chrome.runtime.sendMessage(_req, _call);
 }
 
@@ -288,7 +287,6 @@ function waitForElm(selector) {
 function init() {
   window.playMonitor = new EventMonitor(true);
   playMonitor.setupListeners();
-  console.log("content script loaded");
 }
 
 // youtube music player closing

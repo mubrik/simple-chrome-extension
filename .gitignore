@@ -1,3 +1,4 @@
-# ignore env variable and utf8 cloned module 
+# ignore env variable and utf8 cloned module
 keys.js
 utf8/
+node_modules

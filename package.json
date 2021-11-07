@@ -1,0 +1,46 @@
+{
+  "name": "simple-chrome-extension",
+  "version": "1.0.0",
+  "description": "building a simple chrome extension logs all the music i listen to on youtube music",
+  "main": "background-wrapper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mubrik/simple-chrome-extension.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mubrik/simple-chrome-extension/issues"
+  },
+  "homepage": "https://github.com/mubrik/simple-chrome-extension#readme",
+  "devDependencies": {
+    "eslint": "^8.0.1"
+  },
+  "standard": {
+    "globals": [ "chrome", "lastfmListener"]
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true
+    },
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "ecmaFeatures": {
+            "jsx": true
+        }
+    },
+    "rules": {
+      "semi": [
+        "error",
+        "always"
+      ],
+      "quotes": [
+        "error",
+        "double"
+      ]
+    }
+  }
+}

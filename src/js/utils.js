@@ -320,7 +320,6 @@ function scrobbleTrackToLastFm(song) {
           // clear any error
           saveToStorageSync("errors", null);
         } else if (!result.ok) {
-          console.log(result);
           if ("error" in result.response) {
             // extract error
             const {error} = result.response;
@@ -357,7 +356,7 @@ function scrobbleTrackToLastFm(song) {
  *prepares track nowplaying data and makes request to update lastfm nowplaying
  *  @param {Object} song - the Song instance
  */
-function updateTrackLastFM(song) {
+function updateNowPlayingToLastfm(song) {
   // lastfm request body data
   const bodyData = {
     artist: song.artist,
@@ -372,7 +371,6 @@ function updateTrackLastFM(song) {
         // clear any error
         saveToStorageSync("errors", null);
       } else if (!result.ok) {
-        console.log(result);
         if ("error" in result.response) {
           const {error} = result.response;
           if (error === 9 ) {
@@ -384,8 +382,10 @@ function updateTrackLastFM(song) {
             );
           }
         }
+        // error return false
         return false;
       }
+      // return true for next then
       return true;
     })
     .then((result) => {
@@ -406,10 +406,10 @@ function updateTrackLastFM(song) {
  *gets user track data from last fm, saves to nowplaying
  *  @param {Object} song - the Song instance
  */
-function updateTrackLocal(song) {
+function updateStoreWithUserLastfmTrackDetail(song) {
   // set some vars
   let userPlayCount = null;
-  let userLoved = false;
+  let userLoved = null;
   // body data
   const bodyData = {
     artist: song.artist,
@@ -420,7 +420,8 @@ function updateTrackLocal(song) {
     format: "json",
   };
   // get song details related to user from lastfm
-  makeUnAuthenticatedReq("GET", bodyData)
+  if (lastfm.username !== null) {
+    makeUnAuthenticatedReq("GET", bodyData)
     .then((result) => {
       try {
         if (result.ok) {
@@ -437,16 +438,29 @@ function updateTrackLocal(song) {
       } finally {
         // if error occurs still, store in sync storage
         saveToStorageSync("nowPlaying",
-          {
-            ...song,
-            playCount: userPlayCount,
-            isLoved: userLoved,
-            isScrobbled: false,
-            isPlayingOnLastfm: false,
-          },
-        );
-      }
-    });
+        {
+          ...song,
+          playCount: userPlayCount,
+          isLoved: userLoved,
+          isScrobbled: false,
+          isPlayingOnLastfm: false,
+        }
+      );
+    }
+  });
+} else {
+  // username is null
+  chrome.storage.sync.set({
+    "nowPlaying": {
+      ...song,
+      playCount: null,
+      isLoved: null,
+      isScrobbled: false,
+      isPlayingOnLastfm: false,
+    }
+  });
+    storeAllStorageSyncDataLocal();
+  }
 };
 
 /**

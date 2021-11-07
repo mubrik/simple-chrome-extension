@@ -1,10 +1,12 @@
+/* eslint quotes: ["error", "double"] */
+/* eslint-env es6 */
+
 /** listener for lastfmauth */
 chrome.tabs.onUpdated.addListener(lastfmListener);
 
 /** listener for messages from contentscript/extscript */
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-    console.log("backg received", request);
     if (request.type === "updateLove") {
       // lastfm request body data
       const bodyData = {
@@ -84,12 +86,7 @@ chrome.runtime.onMessage.addListener(
         },
       );
     } else if (request.type === "playingSong") {
-      // experimental moving scrobble/now playing logic from content script here
-      // validation
       if (request.artist && request.title) {
-        if (lastfm.session === null) {
-          return;
-        }
         // params
         const trackData = {
           id: request.id,
@@ -98,25 +95,31 @@ chrome.runtime.onMessage.addListener(
           timers: request.timers,
           isVideo: request.isVideo,
         };
-
-        // compare with storage cache now playing
+        // update track locally
         if (!(trackData.id === lastfm.nowPlaying.id)) {
-          // update local
-          updateTrackLocal(trackData);
+          // update local, then update store
+          saveToStorageSync("nowPlaying", trackData);
+          // get user details about track and update
+          updateStoreWithUserLastfmTrackDetail(trackData);
         }
-
+        // lastfm requests wont work without sessions
+        if (lastfm.session === null) {
+          return;
+        }
+        // update lastfm to notify track now playingSong
         if (lastfm.nowPlaying.id !== null &&
         !lastfm.nowPlaying.isPlayingOnLastfm) {
           // not same track, and hasnt been updated on lastfm
-          updateTrackLastFM(trackData);
+          updateNowPlayingToLastfm(trackData);
         }
-
+        // scrobble
         // check timers
         if (isSongAtScrobbleTime(trackData) &&
                 !lastfm.nowPlaying.isScrobbled) {
           // scrobble, checks for settings implemented
           scrobbleTrackToLastFm(trackData);
         }
+
       }
     } else if (request.type === "trackSeek") {
       // always reset track variables is af a new track if track seeked < 10secs

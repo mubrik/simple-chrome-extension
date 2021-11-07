@@ -1,3 +1,4 @@
+/* global lastfm:writable, lastfm:writable */
 let lastfm = {};
 
 const connectBtn = document.getElementById("connectBtn");
@@ -5,10 +6,11 @@ const loveBtn = document.querySelector(".loveBtn");
 const messaging = document.querySelector(".messaging h4");
 const userLinkBtn = document.querySelector("#userLink");
 const userLinkDiv = document.querySelector("#linkDiv");
-const unAuthMsg = document.querySelector(".unauthorized p");
+const unAuthMsg = document.querySelector(".unauthorized");
 const nowPlaying = document.querySelector(".now-playing");
 const songTitle = document.querySelector(".now-playing .song-title");
 const songArtist = document.querySelector(".now-playing .song-artist");
+const songLove = document.querySelector('.now-playing .song-loveBtn');
 const songScrobbles = document.querySelector(".now-playing .song-scrobbles");
 const scrobbleToggle = document.querySelector("#scrobble-toggle");
 const scrobbleSelect = document.querySelector("#scrobble-length");
@@ -157,11 +159,17 @@ function init() {
 
       // if a track is playing
       if (lastfm.nowPlaying.id !== null) {
+        nowPlaying.classList.remove("hidden");
         songTitle.innerText = lastfm.nowPlaying.track;
         songArtist.innerText = lastfm.nowPlaying.artist;
-        songScrobbles.innerText = `Scrobbles: ${lastfm.nowPlaying.playCount}`;
-        loveBtn.src = lastfm.nowPlaying.isLoved ?
+        if (lastfm.nowPlaying.playCount !== null) {
+          songScrobbles.innerText = `Scrobbles: ${lastfm.nowPlaying.playCount}`;
+        }
+        if (lastfm.nowPlaying.isLoved !== null) {
+          songLove.classList.remove("hidden");
+          loveBtn.src = lastfm.nowPlaying.isLoved ?
           "./images/love.svg" : "./images/love1.svg";
+        }
       }
       // if username is present
       if (lastfm.username !== null) {
